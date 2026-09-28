@@ -1,0 +1,16 @@
+# Security baseline
+Threats include credential stuffing, session theft, CSRF, XSS, SQL injection, IDOR/BOLA, privilege escalation and accidental secret disclosure. Core assumes trusted application operators and a private, authenticated database connection. It does not claim regulatory compliance.
+
+Passwords use Argon2id. Opaque 256-bit session and reset tokens are HMAC-digested at rest. Sessions have idle and absolute expiry, are revoked on password reset/change, account disable and 2FA policy changes. Cookies are HttpOnly, SameSite=Lax, path=/ and Secure in production. Mutations require an exact configured Origin and JSON content type. Production APP_URL must use HTTPS.
+
+Login returns generic failures and performs password verification for missing accounts. Shared database rate limits constrain account and aggregate login attempts; no forwarded IP header is trusted by application code. Nginx adds per-IP limits. Authenticated APIs independently verify permissions; tenant role names grant no special bypass. Roles cannot delegate permissions the actor lacks. Tenant IDs come exclusively from the current authenticated user.
+
+TOTP uses standard SHA1 / six digits / 30 seconds, an adjacent-step window and a persisted monotonic step to reject replay. Secrets are AES-256-GCM encrypted with a separate environment key. Setup expires; enabling requires a valid OTP. Recovery codes are random and HMAC-digested, consumed atomically. Disable/regeneration requires password and second-factor verification. Never log provisioning URIs, OTPs, passwords, tokens, QR images or recovery codes.
+
+All external inputs use strict Zod schemas, bounded strings, enums and bounded pagination. ORM bindings prevent SQL injection. React encodes rendered values; no raw HTML rendering. Security headers deny framing and object embeds. CSP permits inline scripts for Next.js hydration; nonce-based strict CSP is a documented hardening item. Uploads are not implemented: future adapters must enforce size/type/content scanning, isolated storage and download authorization.
+
+Audit service accepts only allowlisted metadata fields and writes sensitive changes in their transaction. Application logs contain event identifiers and request IDs, never arbitrary exception objects or request bodies. Audit retention/export and archival are operator policy. Restrict application DB permissions to necessary DML; isolate migration credentials and archive audit records to append-only storage for tamper evidence.
+
+Secrets come from environment/secret management and are ignored by Git. Encryption-key rotation requires a planned re-encryption job; token HMAC rotation invalidates sessions and outstanding reset/recovery tokens. Backups must be encrypted, access-controlled and restore-tested. Run npm audit in CI, review updates and pin lockfiles. Nginx must enforce TLS and request limits; production errors expose safe codes only.
+
+Reset delivery is intentionally an injected port. With no configured delivery, forgot-password still returns the generic acknowledgement but cannot deliver a link. Configure a trusted provider in the server composition before production; never return reset tokens to clients or log them. Production readiness is conditional on integration tests, provider configuration and operational review.

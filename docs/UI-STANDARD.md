@@ -1,0 +1,4 @@
+# UI standard
+TOMVIS uses a navy navigation rail, white work surfaces and blue action accents. Shared CSS tokens define ink, muted text, border, brand and spacing. Main text is 16px; labels and table content at least 14px. Use reusable shadcn-style Button and Input primitives and Lucide icons.
+
+Desktop navigation becomes a wrapping horizontal navigation on small screens. Tables scroll within their region. Forms have visible labels, appropriate autocomplete, required fields, disabled submission while pending and live status feedback. Keyboard focus remains visible. Never rely on color alone. Empty collections show a clear message. The v0.1 shell provides authenticated read views and settings/password/2FA workflows; full user/role editing is available through APIs and is a later UI enhancement.

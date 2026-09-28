@@ -1,0 +1,2 @@
+import {pageContext} from "@/core/auth/page";import {requirePermission} from "@/core/auth/authorization";import {TransactionDetail} from "@/modules/payment/components/transaction-detail";import {id as uuid} from "@/modules/payment/validators";
+export default async function Page({params}:{params:Promise<{id:string}>}){const ctx=await pageContext();requirePermission(ctx,"payment.transaction.read");const id=uuid.parse((await params).id);return <TransactionDetail id={id} permissions={ctx.permissions}/>;}

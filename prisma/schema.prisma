@@ -1,0 +1,439 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Organization {
+  id            String          @id @default(uuid()) @db.Char(36)
+  slug          String          @unique @db.VarChar(80)
+  name          String          @db.VarChar(160)
+  active        Boolean         @default(true)
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  users         User[]
+  roles         Role[]
+  settings      SystemSetting[]
+  paymentPoints PaymentPoint[]
+  bankAccounts  BankAccount[]
+}
+
+model User {
+  id                   String                 @id @default(uuid()) @db.Char(36)
+  organizationId       String                 @db.Char(36)
+  organization         Organization           @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  email                String                 @db.VarChar(254)
+  passwordHash         String                 @db.VarChar(255)
+  firstName            String                 @default("") @db.VarChar(80)
+  lastName             String                 @default("") @db.VarChar(80)
+  displayName          String                 @db.VarChar(160)
+  status               String                 @default("ACTIVE") @db.VarChar(20)
+  emailVerifiedAt      DateTime?
+  lastLoginAt          DateTime?
+  passwordChangedAt    DateTime               @default(now())
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  roles                UserRole[]
+  sessions             Session[]
+  twoFactor            TwoFactorCredential?
+  recoveryCodes        RecoveryCode[]
+  resets               PasswordReset[]
+  paymentAssignments   PaymentPointUser[]
+  createdPaymentPoints PaymentPoint[]         @relation("PointCreator")
+  openedPaymentShifts  PaymentShift[]         @relation("ShiftOpener")
+  closedPaymentShifts  PaymentShift[]         @relation("ShiftCloser")
+  verifiedPayments     PaymentTransaction[]   @relation("PaymentVerifier")
+  receiptedPayments    PaymentTransaction[]   @relation("PaymentReceipter")
+  paymentStatusChanges PaymentStatusHistory[]
+
+  @@unique([organizationId, email])
+  @@unique([organizationId, id])
+  @@index([organizationId, createdAt])
+}
+
+model Role {
+  id             String           @id @default(uuid()) @db.Char(36)
+  organizationId String           @db.Char(36)
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  name           String           @db.VarChar(80)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  users          UserRole[]
+  permissions    RolePermission[]
+
+  @@unique([organizationId, name])
+  @@unique([organizationId, id])
+}
+
+model Permission {
+  id    String           @id @default(uuid()) @db.Char(36)
+  name  String           @unique @db.VarChar(100)
+  roles RolePermission[]
+}
+
+model UserRole {
+  organizationId String @db.Char(36)
+  userId         String @db.Char(36)
+  roleId         String @db.Char(36)
+  user           User   @relation(fields: [organizationId, userId], references: [organizationId, id], onDelete: Cascade)
+  role           Role   @relation(fields: [organizationId, roleId], references: [organizationId, id], onDelete: Restrict)
+
+  @@id([userId, roleId])
+  @@index([organizationId, roleId])
+}
+
+model RolePermission {
+  roleId       String     @db.Char(36)
+  permissionId String     @db.Char(36)
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Restrict)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model Session {
+  id               String   @id @default(uuid()) @db.Char(36)
+  tokenHash        String   @unique @db.Char(64)
+  userId           String   @db.Char(36)
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  pendingTwoFactor Boolean  @default(false)
+  expiresAt        DateTime
+  idleExpiresAt    DateTime
+  createdAt        DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model TwoFactorCredential {
+  userId          String   @id @db.Char(36)
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  encryptedSecret String   @db.Text
+  enabled         Boolean  @default(false)
+  lastStep        Int      @default(-1)
+  setupExpiresAt  DateTime
+  updatedAt       DateTime @updatedAt
+}
+
+model RecoveryCode {
+  id       String    @id @default(uuid()) @db.Char(36)
+  userId   String    @db.Char(36)
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash String    @unique @db.Char(64)
+  usedAt   DateTime?
+
+  @@index([userId])
+}
+
+model PasswordReset {
+  id        String    @id @default(uuid()) @db.Char(36)
+  userId    String    @db.Char(36)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique @db.Char(64)
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id             String   @id @default(uuid()) @db.Char(36)
+  organizationId String?  @db.Char(36)
+  actorUserId    String?  @db.Char(36)
+  action         String   @db.VarChar(80)
+  resourceType   String   @db.VarChar(80)
+  resourceId     String?  @db.Char(36)
+  result         String   @default("SUCCESS") @db.VarChar(20)
+  ipAddress      String?  @db.VarChar(45)
+  userAgent      String?  @db.VarChar(300)
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, action, createdAt])
+}
+
+model SystemSetting {
+  id             String        @id @default(uuid()) @db.Char(36)
+  scope          String        @db.VarChar(36)
+  organizationId String?       @db.Char(36)
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  key            String        @db.VarChar(80)
+  value          Json
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([scope, key])
+  @@index([organizationId])
+}
+
+model RateLimit {
+  key       String   @id @db.Char(64)
+  count     Int      @default(1)
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+enum PaymentStatus {
+  SUBMITTED
+  PENDING_VERIFY
+  VERIFIED
+  RECEIPTED
+  AMOUNT_MISMATCH
+  POSSIBLE_DUPLICATE
+  INVALID_SLIP
+  REJECTED
+  CANCELLED
+}
+
+enum PaymentPointStatus {
+  ACTIVE
+  INACTIVE
+  TEMPORARILY_CLOSED
+  MAINTENANCE
+}
+
+enum PaymentShiftStatus {
+  OPEN
+  CLOSED
+  LOCKED
+}
+
+enum ReconciliationStatus {
+  MATCHED
+  PARTIAL_MATCH
+  MISMATCH
+  NOT_FOUND
+  DUPLICATE
+}
+
+model BankAccount {
+  id             String         @id @default(uuid()) @db.Char(36)
+  organizationId String         @db.Char(36)
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  code           String         @db.VarChar(40)
+  bankName       String         @db.VarChar(120)
+  accountName    String         @db.VarChar(160)
+  accountNumber  String         @db.VarChar(40)
+  branch         String?        @db.VarChar(120)
+  active         Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  paymentPoints  PaymentPoint[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, code])
+}
+
+model PaymentPoint {
+  id             String               @id @default(uuid()) @db.Char(36)
+  organizationId String               @db.Char(36)
+  organization   Organization         @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  code           String               @db.VarChar(40)
+  name           String               @db.VarChar(160)
+  description    String?              @db.VarChar(500)
+  department     String?              @db.VarChar(120)
+  location       String?              @db.VarChar(160)
+  // Hex encoding of 32 random bytes; never sequential or logged.
+  qrToken        String               @unique @db.Char(64)
+  bankAccountId  String               @db.Char(36)
+  bankAccount    BankAccount          @relation(fields: [organizationId, bankAccountId], references: [organizationId, id], onDelete: Restrict)
+  // Local Asia/Bangkok HH:mm; null means unspecified hours.
+  openTime       String?              @db.Char(5)
+  closeTime      String?              @db.Char(5)
+  status         PaymentPointStatus   @default(INACTIVE)
+  createdBy      String               @db.Char(36)
+  creator        User                 @relation("PointCreator", fields: [organizationId, createdBy], references: [organizationId, id], onDelete: Restrict)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  users          PaymentPointUser[]
+  shifts         PaymentShift[]
+  transactions   PaymentTransaction[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, code])
+  @@index([organizationId, status])
+}
+
+model PaymentPointUser {
+  organizationId String       @db.Char(36)
+  paymentPointId String       @db.Char(36)
+  userId         String       @db.Char(36)
+  point          PaymentPoint @relation(fields: [organizationId, paymentPointId], references: [organizationId, id], onDelete: Restrict)
+  user           User         @relation(fields: [organizationId, userId], references: [organizationId, id], onDelete: Restrict)
+  createdAt      DateTime     @default(now())
+
+  @@id([organizationId, paymentPointId, userId])
+  @@index([organizationId, userId])
+}
+
+model PaymentShift {
+  id               String               @id @default(uuid()) @db.Char(36)
+  organizationId   String               @db.Char(36)
+  paymentPointId   String               @db.Char(36)
+  point            PaymentPoint         @relation(fields: [organizationId, paymentPointId], references: [organizationId, id], onDelete: Restrict)
+  shiftDate        DateTime             @db.Date
+  shiftName        String               @db.VarChar(120)
+  startTime        DateTime
+  endTime          DateTime?
+  openedBy         String               @db.Char(36)
+  opener           User                 @relation("ShiftOpener", fields: [organizationId, openedBy], references: [organizationId, id], onDelete: Restrict)
+  openedAt         DateTime             @default(now())
+  closedBy         String?              @db.Char(36)
+  closer           User?                @relation("ShiftCloser", fields: [organizationId, closedBy], references: [organizationId, id], onDelete: Restrict)
+  closedAt         DateTime?
+  transactionCount Int                  @default(0)
+  declaredAmount   Decimal              @default(0) @db.Decimal(15, 2)
+  verifiedAmount   Decimal              @default(0) @db.Decimal(15, 2)
+  receiptAmount    Decimal              @default(0) @db.Decimal(15, 2)
+  differenceAmount Decimal              @default(0) @db.Decimal(15, 2)
+  status           PaymentShiftStatus   @default(OPEN)
+  // OPEN uses 1; CLOSED/LOCKED use null. Unique key permits only one open shift.
+  openSlot         Int?                 @default(1)
+  version          Int                  @default(0)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  transactions     PaymentTransaction[]
+
+  @@unique([organizationId, paymentPointId, id])
+  @@unique([organizationId, paymentPointId, openSlot])
+  @@index([organizationId, shiftDate, status])
+}
+
+model PaymentTransaction {
+  id                   String                 @id @default(uuid()) @db.Char(36)
+  organizationId       String                 @db.Char(36)
+  paymentNo            String                 @unique @db.VarChar(32)
+  submissionKey        String?                @unique @db.Char(36)
+  statusTokenHash      String?                @unique @db.Char(64)
+  deviceFingerprintHash String?               @db.Char(64)
+  paymentPointId       String                 @db.Char(36)
+  point                PaymentPoint           @relation(fields: [organizationId, paymentPointId], references: [organizationId, id], onDelete: Restrict)
+  shiftId              String?                @db.Char(36)
+  shift                PaymentShift?          @relation(fields: [organizationId, paymentPointId, shiftId], references: [organizationId, paymentPointId, id], onDelete: Restrict)
+  hn                   String                 @db.VarChar(40)
+  vn                   String?                @db.VarChar(40)
+  an                   String?                @db.VarChar(40)
+  patientName          String                 @db.VarChar(160)
+  payerName            String?                @db.VarChar(160)
+  payerPhone           String?                @db.VarChar(30)
+  declaredAmount       Decimal                @db.Decimal(15, 2)
+  verifiedAmount       Decimal?               @db.Decimal(15, 2)
+  sourceBank           String                 @db.VarChar(120)
+  transferDateTime     DateTime
+  status               PaymentStatus          @default(SUBMITTED)
+  submittedAt          DateTime               @default(now())
+  verifiedBy           String?                @db.Char(36)
+  verifier             User?                  @relation("PaymentVerifier", fields: [organizationId, verifiedBy], references: [organizationId, id], onDelete: Restrict)
+  verifiedAt           DateTime?
+  receiptNo            String?                @db.VarChar(80)
+  receiptedBy          String?                @db.Char(36)
+  receipter            User?                  @relation("PaymentReceipter", fields: [organizationId, receiptedBy], references: [organizationId, id], onDelete: Restrict)
+  receiptedAt          DateTime?
+  reconciliationStatus ReconciliationStatus   @default(NOT_FOUND)
+  note                 String?                @db.VarChar(2000)
+  version              Int                    @default(0)
+  createdAt            DateTime               @default(now())
+  updatedAt            DateTime               @updatedAt
+  slips                PaymentSlip[]
+  statusHistory        PaymentStatusHistory[]
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, receiptNo])
+  @@index([organizationId, submittedAt, id])
+  @@index([organizationId, hn])
+  @@index([organizationId, status, submittedAt])
+  @@index([organizationId, paymentPointId, submittedAt])
+  @@index([organizationId, transferDateTime])
+  @@index([organizationId, verifiedAt])
+  @@index([organizationId, verifiedBy, submittedAt])
+  @@index([organizationId, sourceBank, submittedAt])
+  @@index([organizationId, deviceFingerprintHash, submittedAt])
+}
+
+model PaymentSlip {
+  id                   String             @id @default(uuid()) @db.Char(36)
+  organizationId       String             @db.Char(36)
+  paymentTransactionId String             @db.Char(36)
+  transaction          PaymentTransaction @relation(fields: [organizationId, paymentTransactionId], references: [organizationId, id], onDelete: Restrict)
+  driveFileId          String             @unique @db.VarChar(160)
+  driveFolderId        String             @db.VarChar(160)
+  storedFilename       String             @db.VarChar(255)
+  originalFilename     String             @db.VarChar(255)
+  mimeType             String             @db.VarChar(80)
+  fileSize             Int
+  // Deliberately NOT unique: duplicates must be accepted and flagged for review.
+  sha256               String             @db.Char(64)
+  createdAt            DateTime           @default(now())
+  extraction           PaymentSlipExtraction?
+
+  @@unique([organizationId, id])
+  @@index([organizationId, sha256])
+  @@index([organizationId, paymentTransactionId])
+}
+
+model PaymentSlipExtraction {
+  id             String      @id @default(uuid()) @db.Char(36)
+  organizationId String      @db.Char(36)
+  paymentSlipId  String      @unique @db.Char(36)
+  slip           PaymentSlip @relation(fields: [organizationId, paymentSlipId], references: [organizationId, id], onDelete: Restrict)
+  status         String      @default("PENDING") @db.VarChar(20)
+  provider       String?     @db.VarChar(40)
+  amount         Decimal?    @db.Decimal(15, 2)
+  transferAt     DateTime?
+  bankName       String?     @db.VarChar(120)
+  reference      String?     @db.VarChar(120)
+  confidence     Decimal?    @db.Decimal(5, 4)
+  attempts       Int         @default(0)
+  errorCode      String?     @db.VarChar(40)
+  processedAt    DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, paymentSlipId])
+  @@index([organizationId, status, createdAt])
+}
+
+model PaymentStatusHistory {
+  id                   String             @id @default(uuid()) @db.Char(36)
+  organizationId       String             @db.Char(36)
+  paymentTransactionId String             @db.Char(36)
+  transaction          PaymentTransaction @relation(fields: [organizationId, paymentTransactionId], references: [organizationId, id], onDelete: Restrict)
+  fromStatus           PaymentStatus?
+  toStatus             PaymentStatus
+  version              Int
+  changedBy            String?            @db.Char(36)
+  actor                User?              @relation(fields: [organizationId, changedBy], references: [organizationId, id], onDelete: Restrict)
+  reason               String?            @db.VarChar(1000)
+  createdAt            DateTime           @default(now())
+
+  @@unique([organizationId, paymentTransactionId, version])
+  @@index([organizationId, paymentTransactionId, createdAt])
+}
+
+// Global technical counter, not tenant data: PAY-YYYYMMDD-NNNNNN is globally unique.
+model PaymentNumberSequence {
+  date  DateTime @id @db.Date
+  value Int      @default(0)
+}
+
+// Durable upload intent enables idempotency and orphan recovery across Drive/DB.
+model PaymentUpload {
+  id             String   @id @db.Char(36)
+  organizationId String   @db.Char(36)
+  paymentPointId String   @db.Char(36)
+  fingerprint    String   @db.Char(64)
+  paymentNo      String   @unique @db.VarChar(32)
+  driveFileId    String?  @unique @db.VarChar(160)
+  state          String   @default("RESERVED") @db.VarChar(20)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([state, updatedAt])
+}

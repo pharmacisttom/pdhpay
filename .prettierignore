@@ -1,0 +1,6 @@
+node_modules
+.next
+.npm-cache
+src/generated
+package-lock.json
+prisma/migrations
