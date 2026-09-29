@@ -353,7 +353,7 @@ model PaymentTransaction {
   @@index([organizationId, verifiedAt])
   @@index([organizationId, verifiedBy, submittedAt])
   @@index([organizationId, sourceBank, submittedAt])
-  @@index([organizationId, deviceFingerprintHash, submittedAt])
+  @@index([organizationId, deviceFingerprintHash, submittedAt], map: "PaymentTxn_org_device_submitted_idx")
 }
 
 model PaymentSlip {

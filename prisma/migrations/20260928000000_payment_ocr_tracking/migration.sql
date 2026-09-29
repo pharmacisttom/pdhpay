@@ -32,7 +32,7 @@ CREATE TABLE `PaymentSlipExtraction` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE UNIQUE INDEX `PaymentTransaction_statusTokenHash_key` ON `PaymentTransaction`(`statusTokenHash`);
-CREATE INDEX `PaymentTransaction_organizationId_deviceFingerprintHash_submittedAt_idx`
+CREATE INDEX `PaymentTxn_org_device_submitted_idx`
   ON `PaymentTransaction`(`organizationId`, `deviceFingerprintHash`, `submittedAt`);
 
 ALTER TABLE `PaymentSlipExtraction`

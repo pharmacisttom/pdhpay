@@ -6,7 +6,9 @@
 commit 8610ef0e5cfaafa6820e8794372d4bc7e3aa152b
 
 ใช้ session, RBAC, audit, database และ UI ของ Core เดิม; หน้า /finance ต้องมี payment.dashboard.read.
-Phase 2 เพิ่ม schema, migration และ development seed ของ payment แล้ว ยังไม่เปิดรับชำระเงินจริง.
+ระบบครอบคลุมการจัดการจุดรับชำระ, QR, public slip upload, private Google
+Drive storage, manual verification, OCR, shifts, reports และ public status tracking.
+การเปิด production ต้องผ่านรายการใน `docs/PRODUCTION-READINESS.md` ก่อนเสมอ.
 
 ## Development
 
@@ -18,7 +20,8 @@ Phase 2 เพิ่ม schema, migration และ development seed ของ p
 6. ตั้ง NODE_ENV=development, SEED_ORGANIZATION=pdh-dev และ SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD แล้ว npm run db:seed เฉพาะ development
 7. npm run dev; เข้าสู่ระบบ /login แล้วเปิด /finance
 
-Google variables ยังไม่ต้องตั้งใน Phase 1. ห้าม commit credentials. งานนี้ไม่รัน migration/seed ให้อัตโนมัติ.
+ตั้ง Google Drive/Sheets/Vision ตาม `.env.example`; ห้าม commit credentials.
+งานพัฒนาไม่รัน migration/seed ให้อัตโนมัติ.
 
 ## Validation
 
@@ -36,4 +39,5 @@ Live DB tests ต้องตั้ง TEST_DATABASE_URL ไปยัง disposa
 - [Core setup เดิม](docs/TOMVIS-README.md)
 - [Security baseline](docs/SECURITY.md)
 
-ยังต้องพัฒนา Phase 3–12: จัดการจุดชำระเงิน/QR, upload/Drive, verification, shifts, reports, Thai UI และ production readiness. Build ผ่านไม่ได้หมายถึงพร้อมใช้งานจริง.
+Build ผ่านไม่ได้หมายถึงพร้อมใช้งานจริง ต้องผ่าน live MySQL integration tests,
+ตั้งค่า external services, backup/restore, TLS และ production acceptance ก่อน.

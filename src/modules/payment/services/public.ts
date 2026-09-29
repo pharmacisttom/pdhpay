@@ -148,14 +148,8 @@ export async function submitPayment(
       where: { id: intent.id },
       data: { driveFileId: driveId, state: "UPLOADING" },
     });
-    const filename =
-      intent.paymentNo +
-      "_" +
-      input.hn +
-      "_" +
-      input.declaredAmount.replace(".", "-") +
-      "." +
-      validated.ext;
+    // Drive filenames must not expose HN, patient data or payment amounts.
+    const filename = `${intent.paymentNo}_${intent.id}.${validated.ext}`;
     const stored = await storage.upload({
       id: driveId,
       name: filename,
@@ -233,9 +227,10 @@ export async function submitPayment(
             paymentTransactionId: payment.id,
             ...stored,
             storedFilename: filename,
-            originalFilename: file.name,
+            // Source filenames can contain patient names or device metadata.
+            originalFilename: `upload.${validated.ext}`,
             mimeType: validated.mime,
-            fileSize: file.size,
+            fileSize: validated.bytes.length,
             sha256: validated.sha256,
           },
         });

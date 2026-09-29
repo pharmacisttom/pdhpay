@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": ".tools\\node-v24.21.0-win-x64\\node.exe node_modules\\next\\dist\\bin\\next dev",
+    "predev": "node scripts/check-node-version.mjs",
+    "dev": "next dev",
+    "prebuild": "node scripts/check-node-version.mjs",
     "build": "prisma generate && next build",
+    "prestart": "node scripts/check-node-version.mjs",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "prisma generate && tsc --noEmit",
