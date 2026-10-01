@@ -103,7 +103,9 @@ export function PrintReceiptUI({ receipt }: { receipt: ReceiptData }) {
         </article>
       </div>
 
-      <style jsx global>{`
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `
         @media print {
           body * {
             visibility: hidden;
@@ -133,7 +135,9 @@ export function PrintReceiptUI({ receipt }: { receipt: ReceiptData }) {
             margin: 5mm;
           }
         }
-      `}</style>
+      `,
+        }}
+      />
     </section>
   );
 }
