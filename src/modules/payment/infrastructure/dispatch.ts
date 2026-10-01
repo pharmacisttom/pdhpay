@@ -31,10 +31,10 @@ import {
 } from "../services/shifts";
 import { shiftInput, versionInput } from "../validators";
 import { pointScope } from "../services/points";
-import { googleSheetsStatus, syncReceiptedPayments } from "./google-sheets";
+import { googleSheetsStatus, syncReceiptedPayments, saveSheetsConfig, sheetsConfigSchema } from "./google-sheets";
 import { processSlipOcr } from "../services/ocr";
 import { exportReport, reportFilters } from "../services/reports";
-import { driveStatus, testDriveConnection } from "../services/drive-admin";
+import { driveStatus, testDriveConnection, saveDriveConfig, driveConfigSchema } from "../services/drive-admin";
 import { listDepartments, saveDepartment, departmentInput } from "../services/departments";
 import { listAdminUsers, updateUserRoles, userRoleUpdateInput } from "../services/users-admin";
 export async function dispatch(request: Request, segments: string[]) {
@@ -43,6 +43,10 @@ export async function dispatch(request: Request, segments: string[]) {
     const [resource, key, action] = segments;
     if (resource === "drive" && key === "status" && request.method === "GET")
       return driveStatus(ctx);
+    if (resource === "drive" && key === "config" && request.method === "POST") {
+      const input = await body(request, driveConfigSchema);
+      return saveDriveConfig(ctx, input, requestId);
+    }
     if (resource === "drive" && key === "test" && request.method === "POST") {
       await body(request, z.object({}).strict());
       return testDriveConnection(ctx, requestId);
@@ -57,6 +61,10 @@ export async function dispatch(request: Request, segments: string[]) {
       );
     if (resource === "sheets" && key === "status" && request.method === "GET")
       return googleSheetsStatus(ctx);
+    if (resource === "sheets" && key === "config" && request.method === "POST") {
+      const input = await body(request, sheetsConfigSchema);
+      return saveSheetsConfig(ctx, input, requestId);
+    }
     if (resource === "sheets" && key === "sync" && request.method === "POST") {
       await body(request, z.object({}).strict());
       return syncReceiptedPayments(ctx, requestId);

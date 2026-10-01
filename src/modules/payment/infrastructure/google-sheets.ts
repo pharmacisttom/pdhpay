@@ -59,16 +59,78 @@ async function request(path: string, init: RequestInit = {}) {
   }
 }
 
-export function googleSheetsStatus(ctx: Context) {
+export const sheetsConfigSchema = z.object({
+  sheetId: z.string().trim().regex(/^[\w-]+$/),
+  range: z.string().trim().min(1).max(120).default("Payments!A:K"),
+});
+
+export async function googleSheetsStatus(ctx: Context) {
   requirePermission(ctx, "payment.report.export");
+
+  const settings = await db().systemSetting.findMany({
+    where: {
+      organizationId: ctx.organizationId,
+      key: { in: ["GOOGLE_SHEET_ID", "GOOGLE_SHEET_RANGE"] },
+    },
+  });
+
+  for (const s of settings) {
+    if (s.value !== null && s.value !== undefined) {
+      process.env[s.key] = String(s.value);
+    }
+  }
+
   const parsed = sheetConfig.safeParse({
     ...process.env,
     GOOGLE_SHEET_RANGE: process.env.GOOGLE_SHEET_RANGE || "Payments!A:K",
   });
+
   return {
     configured: parsed.success,
-    range: parsed.success ? parsed.data.GOOGLE_SHEET_RANGE : null,
+    sheetId: process.env.GOOGLE_SHEET_ID || "",
+    range: parsed.success ? parsed.data.GOOGLE_SHEET_RANGE : process.env.GOOGLE_SHEET_RANGE || "Payments!A:K",
   };
+}
+
+export async function saveSheetsConfig(
+  ctx: Context,
+  input: z.infer<typeof sheetsConfigSchema>,
+  requestId?: string,
+) {
+  requirePermission(ctx, "payment.admin.manage");
+
+  const updates: Record<string, string> = {
+    GOOGLE_SHEET_ID: input.sheetId,
+    GOOGLE_SHEET_RANGE: input.range || "Payments!A:K",
+  };
+
+  await db().$transaction(async (tx) => {
+    for (const [key, value] of Object.entries(updates)) {
+      await tx.systemSetting.upsert({
+        where: { scope_key: { scope: ctx.organizationId, key } },
+        create: {
+          scope: ctx.organizationId,
+          organizationId: ctx.organizationId,
+          key,
+          value,
+        },
+        update: { value },
+      });
+      process.env[key] = value;
+    }
+
+    await audit(
+      tx,
+      ctx,
+      "GOOGLE_SHEETS_CONFIG_UPDATED",
+      "payment-report",
+      undefined,
+      "SUCCESS",
+      { requestId },
+    );
+  });
+
+  return { success: true };
 }
 
 export async function syncReceiptedPayments(ctx: Context, requestId?: string) {
