@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pdhpay_app
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.production
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:10.11
+    container_name: pdhpay_db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: RootSecretPassword123!
+      MYSQL_DATABASE: pdhpay_prod
+      MYSQL_USER: pdhuser
+      MYSQL_PASSWORD: StrongProductionPassword123!
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck-sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  mariadb_data:
