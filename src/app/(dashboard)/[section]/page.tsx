@@ -7,6 +7,9 @@ import { AppError } from "@/core/errors";
 import { ApiForm } from "@/components/shared/api-form";
 import { TwoFactor } from "@/components/shared/two-factor";
 import { RegistrationApproval } from "@/components/users/registration-approval";
+import { UserManager } from "@/components/users/user-manager";
+import { RoleManager } from "@/components/roles/role-manager";
+
 const titles: Record<string, string> = {
   dashboard: "Overview",
   users: "Users",
@@ -44,25 +47,15 @@ export default async function Section({
   const object = data as Record<string, unknown>;
   return (
     <>
-      <div className="page-head">
-        <p className="eyebrow">Workspace administration</p>
-        <h1>{titles[section]}</h1>
-        <p>
-          {section === "dashboard"
-            ? "Your organization at a glance."
-            : section === "audit"
-              ? "A record of account activity and administrative changes."
-              : section === "users"
-                ? "People with access to your organization."
-                : section === "roles"
-                  ? "Reusable permission sets for your team."
-                  : section === "settings"
-                    ? "Workspace preferences and account security."
-                    : "Your current organization."}
-        </p>
-      </div>
+      {section === "users" && <UserManager initialData={object} />}
+      {section === "roles" && <RoleManager initialData={object} />}
       {section === "dashboard" && (
         <>
+          <div className="page-head">
+            <p className="eyebrow">Workspace administration</p>
+            <h1>{titles[section]}</h1>
+            <p>Your organization at a glance.</p>
+          </div>
           <div className="metrics">
             {[
               ["users", "Users"],
@@ -96,8 +89,15 @@ export default async function Section({
           </section>
         </>
       )}
-      {["users", "roles", "audit"].includes(section) && (
-        <Collection section={section} data={object} />
+      {section === "audit" && (
+        <>
+          <div className="page-head">
+            <p className="eyebrow">Workspace administration</p>
+            <h1>{titles[section]}</h1>
+            <p>A record of account activity and administrative changes.</p>
+          </div>
+          <Collection section="audit" data={object} />
+        </>
       )}
       {section === "organizations" && (
         <section className="panel">
