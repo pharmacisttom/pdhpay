@@ -118,9 +118,10 @@ p {
   flex-direction: column;
   gap: 0.25rem;
 }
-.sidebar nav a {
+.sidebar nav a,
+.nav-item-link {
   display: flex;
-  gap: 0.75rem;
+  justify-content: space-between;
   align-items: center;
   color: #d4dfee;
   padding: 0.65rem 0.75rem;
@@ -128,11 +129,19 @@ p {
   font-size: 0.875rem;
   transition: all 0.15s ease-in-out;
 }
-.sidebar nav a:hover {
+.sidebar nav a:hover,
+.nav-item-link:hover {
   background: rgba(255, 255, 255, 0.15);
   color: #ffffff;
   text-decoration: none;
   transform: translateX(2px);
+}
+.nav-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.15rem 0.45rem;
+  border-radius: 9999px;
+  line-height: 1;
 }
 .sidebar-footer {
   margin-top: auto;
@@ -143,20 +152,128 @@ p {
 }
 .main {
   min-width: 0;
+  background-color: #f8fafc;
 }
 .topbar {
-  background: white;
-  border-bottom: 1px solid var(--line);
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  padding: 1.1rem 2.5rem;
+  gap: 1.5rem;
+  padding: 0.85rem 2rem;
   font-size: 0.875rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
+}
+.topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.topbar-tab {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 6px;
+  color: #64748b;
+  font-weight: 500;
+  font-size: 0.85rem;
+  transition: all 0.15s ease;
+}
+.topbar-tab:hover {
+  color: #0f172a;
+  background-color: #f1f5f9;
+  text-decoration: none;
+}
+.topbar-tab.active {
+  color: #0284c7;
+  background-color: #e0f2fe;
+  font-weight: 600;
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.topbar-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  color: #64748b;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+.topbar-icon-btn:hover {
+  color: #0f172a;
+  background-color: #f1f5f9;
+  border-color: #cbd5e1;
+}
+.topbar-unread-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background-color: #ef4444;
+  color: white;
+  font-size: 0.65rem;
+  font-weight: 800;
+  width: 17px;
+  height: 17px;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+}
+.topbar-divider {
+  width: 1px;
+  height: 24px;
+  background-color: #e2e8f0;
+}
+.user-profile-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+.user-avatar-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #0284c7 0%, #0d9488 100%);
+  color: white;
+  font-weight: 700;
+  font-size: 0.875rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 4px rgba(2, 132, 199, 0.2);
+}
+.user-info-text {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.user-name {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #0f172a;
+}
+.user-org {
+  font-size: 0.725rem;
+  color: #64748b;
 }
 .content {
-  padding: 2.5rem;
-  max-width: 1450px;
+  padding: 2rem 2.5rem;
+  max-width: 1480px;
 }
 .eyebrow {
   color: var(--brand);

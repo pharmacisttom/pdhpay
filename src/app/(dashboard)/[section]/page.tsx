@@ -9,6 +9,7 @@ import { TwoFactor } from "@/components/shared/two-factor";
 import { RegistrationApproval } from "@/components/users/registration-approval";
 import { UserManager } from "@/components/users/user-manager";
 import { RoleManager } from "@/components/roles/role-manager";
+import { OneAdminDashboard } from "@/components/dashboard/one-admin-dashboard";
 
 const titles: Record<string, string> = {
   dashboard: "Overview",
@@ -49,46 +50,7 @@ export default async function Section({
     <>
       {section === "users" && <UserManager initialData={object} />}
       {section === "roles" && <RoleManager initialData={object} />}
-      {section === "dashboard" && (
-        <>
-          <div className="page-head">
-            <p className="eyebrow">Workspace administration</p>
-            <h1>{titles[section]}</h1>
-            <p>Your organization at a glance.</p>
-          </div>
-          <div className="metrics">
-            {[
-              ["users", "Users"],
-              ["roles", "Roles"],
-              ["events", "Audit events"],
-            ].map(([key, label]) => (
-              <section className="panel metric" key={key}>
-                <p>{label}</p>
-                <strong>
-                  {object[key] === null ? "—" : String(object[key])}
-                </strong>
-                <p>Current organization</p>
-              </section>
-            ))}
-          </div>
-          <section className="panel">
-            <h2>System information</h2>
-            <dl className="info-grid">
-              {["product", "version", "build", "environment"].map((key) => (
-                <div key={key} style={{ display: "contents" }}>
-                  <dt>{key[0].toUpperCase() + key.slice(1)}</dt>
-                  <dd>{String(object[key])}</dd>
-                </div>
-              ))}
-            </dl>
-          </section>
-          <section className="panel">
-            <h2>Account security</h2>
-            <p>Manage your password and authenticator in settings.</p>
-            <Link href="/settings">Open settings →</Link>
-          </section>
-        </>
-      )}
+      {section === "dashboard" && <OneAdminDashboard data={object} />}
       {section === "audit" && (
         <>
           <div className="page-head">
