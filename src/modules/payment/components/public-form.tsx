@@ -1,484 +1,888 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Camera,
   CheckCircle2,
-  Languages,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  Globe,
+  ImageIcon,
+  RefreshCw,
   ShieldCheck,
-  Upload,
+  Trash2,
+  AlertCircle,
+  QrCode,
+  ExternalLink,
 } from "lucide-react";
-import { confirmAction, showError } from "./api";
+import {
+  getTranslation,
+  formatDate,
+  type SupportedLocale,
+} from "../i18n/translations";
+import {
+  generatePromptPayPayload,
+  generateQrDataUrl,
+} from "../lib/promptpay";
 
-const deviceKey = "pdh-payment-device-id";
 const languageKey = "pdh-payment-language";
-type Language = "th" | "en" | "my" | "km";
+const deviceKey = "pdh-payment-device-id";
 
-const copy = {
-  th: {
-    label: "ไทย",
-    title: "แนบสลิปโอนเงิน",
-    steps: ["1 กรอกข้อมูล", "2 แนบสลิป", "3 รับเลขอ้างอิง"],
-    patientTitle: "ข้อมูลผู้ป่วย",
-    patientHelp: "กรอกข้อมูลให้ตรงกับใบนัดหรือบัตรโรงพยาบาล",
-    patientName: "ชื่อ–นามสกุลผู้ป่วย",
-    optional: "ถ้ามี",
-    example: "เช่น 1234567",
-    transferTitle: "ข้อมูลการโอนเงิน",
-    transferHelp: "ตรวจสอบยอดและเวลาให้ตรงกับสลิป",
-    amount: "จำนวนเงิน (บาท)",
-    bank: "ธนาคารต้นทาง",
-    bankPlaceholder: "ธนาคารที่ใช้โอน",
-    transferTime: "วันและเวลาโอน",
-    payerName: "ชื่อผู้โอน",
-    phone: "เบอร์โทรศัพท์",
-    slipTitle: "ถ่ายรูปหรือแนบสลิป",
-    slipHelp: "ภาพต้องเห็นยอด เวลา และเลขอ้างอิงชัดเจน",
-    chooseFile: "แตะเพื่อถ่ายรูปหรือเลือกไฟล์",
-    fileTypes: "JPG, PNG, WEBP หรือ PDF ไม่เกิน 5 MB",
-    preview: "ตัวอย่างสลิปที่เลือก",
-    note: "หมายเหตุ",
-    notePlaceholder: "ข้อมูลเพิ่มเติม (ถ้ามี)",
-    privacyTitle: "ความเป็นส่วนตัวและการป้องกันทุจริต",
-    privacy:
-      "ระบบไม่อ่านหรือเก็บ IMEI หรือ serial number ของโทรศัพท์ แต่เก็บรหัสอุปกรณ์แบบสุ่มในรูป HMAC hash พร้อมเวลาและข้อมูลเบราว์เซอร์ เพื่อช่วยตรวจรายการซ้ำ โดยไม่ใช้เป็นหลักฐานยืนยันตัวตนเพียงอย่างเดียว",
-    submit: "ส่งหลักฐานการชำระเงิน",
-    submitting: "กำลังส่ง กรุณาอย่าปิดหน้านี้…",
-    confirm: "ยืนยันส่งหลักฐานการชำระเงิน?",
-    success: "รับหลักฐานแล้ว",
-    reference: "เลขอ้างอิง",
-    track: "ติดตามสถานะรายการ",
-    successHelp:
-      "กรุณาเก็บเลขอ้างอิงไว้ การส่งหลักฐานยังไม่ถือเป็นการยืนยันยอดหรือออกใบเสร็จ",
-  },
-  en: {
-    label: "English",
-    title: "Upload transfer slip",
-    steps: ["1 Enter details", "2 Upload slip", "3 Get reference"],
-    patientTitle: "Patient details",
-    patientHelp:
-      "Enter the details shown on the appointment card or hospital card.",
-    patientName: "Patient full name",
-    optional: "optional",
-    example: "e.g. 1234567",
-    transferTitle: "Transfer details",
-    transferHelp: "Make sure the amount and time match the transfer slip.",
-    amount: "Amount (THB)",
-    bank: "Sending bank",
-    bankPlaceholder: "Bank used for the transfer",
-    transferTime: "Transfer date and time",
-    payerName: "Payer name",
-    phone: "Phone number",
-    slipTitle: "Take a photo or upload the slip",
-    slipHelp: "The amount, time, and reference number must be clearly visible.",
-    chooseFile: "Tap to take a photo or choose a file",
-    fileTypes: "JPG, PNG, WEBP or PDF, up to 5 MB",
-    preview: "Selected slip preview",
-    note: "Note",
-    notePlaceholder: "Additional information (optional)",
-    privacyTitle: "Privacy and fraud prevention",
-    privacy:
-      "The system does not read or store your phone's IMEI or serial number. It stores a random device identifier as an HMAC hash with the time and browser information to help detect duplicate submissions. This is not used as sole proof of identity.",
-    submit: "Submit payment evidence",
-    submitting: "Submitting. Please keep this page open…",
-    confirm: "Submit this payment evidence?",
-    success: "Evidence received",
-    reference: "Reference number",
-    track: "Track submission status",
-    successHelp:
-      "Please keep this reference number. Submitting evidence does not confirm the payment or issue a receipt.",
-  },
-  my: {
-    label: "မြန်မာ",
-    title: "ငွေလွှဲပြေစာ တင်ရန်",
-    steps: ["၁ အချက်အလက်ဖြည့်ရန်", "၂ ပြေစာတင်ရန်", "၃ ရည်ညွှန်းနံပါတ်ရယူရန်"],
-    patientTitle: "လူနာအချက်အလက်",
-    patientHelp: "ဆေးရုံကတ် သို့မဟုတ် ချိန်းဆိုကတ်ပါ အချက်အလက်အတိုင်း ဖြည့်ပါ။",
-    patientName: "လူနာအမည်အပြည့်အစုံ",
-    optional: "ရှိလျှင်",
-    example: "ဥပမာ 1234567",
-    transferTitle: "ငွေလွှဲအချက်အလက်",
-    transferHelp: "ငွေပမာဏနှင့် အချိန်ကို ပြေစာနှင့် ကိုက်ညီကြောင်း စစ်ဆေးပါ။",
-    amount: "ငွေပမာဏ (ဘတ်)",
-    bank: "ငွေလွှဲသည့်ဘဏ်",
-    bankPlaceholder: "အသုံးပြုသည့်ဘဏ်",
-    transferTime: "ငွေလွှဲသည့်ရက်နှင့်အချိန်",
-    payerName: "ငွေလွှဲသူအမည်",
-    phone: "ဖုန်းနံပါတ်",
-    slipTitle: "ဓာတ်ပုံရိုက်ရန် သို့မဟုတ် ပြေစာတင်ရန်",
-    slipHelp: "ငွေပမာဏ၊ အချိန်နှင့် ရည်ညွှန်းနံပါတ် ရှင်းလင်းစွာ မြင်ရပါမည်။",
-    chooseFile: "ဓာတ်ပုံရိုက်ရန် သို့မဟုတ် ဖိုင်ရွေးရန် နှိပ်ပါ",
-    fileTypes: "JPG, PNG, WEBP သို့မဟုတ် PDF၊ 5 MB အထိ",
-    preview: "ရွေးချယ်ထားသော ပြေစာ",
-    note: "မှတ်ချက်",
-    notePlaceholder: "ထပ်မံအချက်အလက် (ရှိလျှင်)",
-    privacyTitle: "ကိုယ်ရေးအချက်အလက်နှင့် လိမ်လည်မှုကာကွယ်ရေး",
-    privacy:
-      "စနစ်သည် ဖုန်း၏ IMEI သို့မဟုတ် serial number ကို မဖတ်၊ မသိမ်းပါ။ ထပ်တူတင်မှုကို စစ်ဆေးရန် ကျပန်းစက်ပစ္စည်းကုဒ်ကို HMAC hash အဖြစ် အချိန်နှင့် browser အချက်အလက်တို့နှင့်အတူ သိမ်းဆည်းသည်။ ၎င်းကို အထောက်အထားတစ်ခုတည်းအဖြစ် မသုံးပါ။",
-    submit: "ငွေပေးချေမှုအထောက်အထား ပို့ရန်",
-    submitting: "ပို့နေပါသည်။ ဤစာမျက်နှာကို မပိတ်ပါနှင့်…",
-    confirm: "ငွေပေးချေမှုအထောက်အထားကို ပို့မည်လား?",
-    success: "အထောက်အထား လက်ခံရရှိပါပြီ",
-    reference: "ရည်ညွှန်းနံပါတ်",
-    track: "အခြေအနေစစ်ဆေးရန်",
-    successHelp:
-      "ရည်ညွှန်းနံပါတ်ကို သိမ်းထားပါ။ အထောက်အထားတင်ခြင်းသည် ငွေပေးချေမှုအတည်ပြုခြင်း သို့မဟုတ် ပြေစာထုတ်ပေးခြင်း မဟုတ်ပါ။",
-  },
-  km: {
-    label: "ខ្មែរ",
-    title: "បញ្ចូលបង្កាន់ដៃផ្ទេរប្រាក់",
-    steps: ["១ បំពេញព័ត៌មាន", "២ បញ្ចូលបង្កាន់ដៃ", "៣ ទទួលលេខយោង"],
-    patientTitle: "ព័ត៌មានអ្នកជំងឺ",
-    patientHelp: "សូមបំពេញព័ត៌មានឱ្យត្រូវនឹងប័ណ្ណណាត់ជួប ឬប័ណ្ណមន្ទីរពេទ្យ។",
-    patientName: "ឈ្មោះពេញអ្នកជំងឺ",
-    optional: "បើមាន",
-    example: "ឧ. 1234567",
-    transferTitle: "ព័ត៌មានការផ្ទេរប្រាក់",
-    transferHelp: "សូមពិនិត្យចំនួនប្រាក់ និងម៉ោងឱ្យត្រូវនឹងបង្កាន់ដៃ។",
-    amount: "ចំនួនប្រាក់ (បាត)",
-    bank: "ធនាគារផ្ញើប្រាក់",
-    bankPlaceholder: "ធនាគារដែលបានប្រើ",
-    transferTime: "កាលបរិច្ឆេទ និងម៉ោងផ្ទេរ",
-    payerName: "ឈ្មោះអ្នកផ្ទេរ",
-    phone: "លេខទូរស័ព្ទ",
-    slipTitle: "ថតរូប ឬបញ្ចូលបង្កាន់ដៃ",
-    slipHelp: "ត្រូវមើលឃើញចំនួនប្រាក់ ម៉ោង និងលេខយោងឱ្យច្បាស់។",
-    chooseFile: "ចុចដើម្បីថតរូប ឬជ្រើសរើសឯកសារ",
-    fileTypes: "JPG, PNG, WEBP ឬ PDF មិនលើស 5 MB",
-    preview: "មើលបង្កាន់ដៃដែលបានជ្រើស",
-    note: "កំណត់ចំណាំ",
-    notePlaceholder: "ព័ត៌មានបន្ថែម (បើមាន)",
-    privacyTitle: "ឯកជនភាព និងការការពារការក្លែងបន្លំ",
-    privacy:
-      "ប្រព័ន្ធមិនអាន ឬរក្សាទុក IMEI ឬ serial number របស់ទូរស័ព្ទទេ។ ប្រព័ន្ធរក្សាទុកលេខសម្គាល់ឧបករណ៍ចៃដន្យជា HMAC hash ជាមួយពេលវេលា និងព័ត៌មាន browser ដើម្បីជួយរកការផ្ញើស្ទួន។ វាមិនត្រូវបានប្រើជាភស្តុតាងអត្តសញ្ញាណតែមួយទេ។",
-    submit: "ផ្ញើភស្តុតាងការទូទាត់",
-    submitting: "កំពុងផ្ញើ សូមកុំបិទទំព័រនេះ…",
-    confirm: "ផ្ញើភស្តុតាងការទូទាត់នេះឬ?",
-    success: "បានទទួលភស្តុតាងហើយ",
-    reference: "លេខយោង",
-    track: "តាមដានស្ថានភាព",
-    successHelp:
-      "សូមរក្សាទុកលេខយោងនេះ។ ការផ្ញើភស្តុតាងមិនមែនជាការបញ្ជាក់ការទូទាត់ ឬការចេញបង្កាន់ដៃទេ។",
-  },
-} as const;
-
-function deviceId() {
+function getOrCreateDeviceId(): string {
+  if (typeof window === "undefined") return "00000000-0000-4000-a000-000000000000";
   try {
-    const current = localStorage.getItem(deviceKey);
-    if (current) return current;
-    const created = crypto.randomUUID();
-    localStorage.setItem(deviceKey, created);
-    return created;
+    let id = localStorage.getItem(deviceKey);
+    if (!id || !/^[0-9a-f-]{36}$/i.test(id)) {
+      id = crypto.randomUUID();
+      localStorage.setItem(deviceKey, id);
+    }
+    return id;
   } catch {
     return crypto.randomUUID();
   }
 }
 
-function initialLanguage(): Language {
-  if (typeof window === "undefined") return "th";
-  const saved = localStorage.getItem(languageKey) as Language | null;
-  if (saved && saved in copy) return saved;
-  const browser = navigator.language.toLowerCase();
-  if (browser.startsWith("en")) return "en";
-  if (browser.startsWith("my")) return "my";
-  if (browser.startsWith("km")) return "km";
-  return "th";
+interface PointData {
+  name: string;
+  code: string;
+  location?: string;
+  bankAccount: {
+    bankName: string;
+    accountName: string;
+    accountNumber: string;
+    code: string;
+  };
 }
 
-function LanguageSelector({
-  language,
-  setLanguage,
-}: {
-  language: Language;
-  setLanguage: (value: Language) => void;
-}) {
-  return (
-    <label className="payment-language">
-      <Languages size={18} aria-hidden="true" />
-      <span className="sr-only">Language</span>
-      <select
-        value={language}
-        onChange={(event) => setLanguage(event.target.value as Language)}
-        aria-label="Language"
-      >
-        {(Object.keys(copy) as Language[]).map((code) => (
-          <option key={code} value={code}>
-            {copy[code].label}
-          </option>
-        ))}
-      </select>
-    </label>
-  );
-}
-
-export function PublicForm({
-  token,
-  proof,
-  pointName,
-}: {
+interface PublicFormProps {
   token: string;
   proof: string;
-  pointName: string;
-}) {
-  const [key] = useState(() => crypto.randomUUID());
-  const [language, setLanguageState] = useState<Language>("th");
-  const [busy, setBusy] = useState(false);
-  const [reference, setReference] = useState("");
-  const [trackingToken, setTrackingToken] = useState("");
-  const [preview, setPreview] = useState("");
-  const t = copy[language];
-  useEffect(() => {
-    const timer = window.setTimeout(
-      () => setLanguageState(initialLanguage()),
-      0,
-    );
-    return () => window.clearTimeout(timer);
-  }, []);
-  useEffect(
-    () => () => {
-      if (preview) URL.revokeObjectURL(preview);
-    },
-    [preview],
-  );
-  function setLanguage(value: Language) {
-    setLanguageState(value);
+  pointData: PointData;
+}
+
+export function PublicForm({ token, proof, pointData }: PublicFormProps) {
+  // Locale State initialized safely without calling setState in effect
+  const [locale, setLocale] = useState<SupportedLocale>(() => {
+    if (typeof window === "undefined") return "th";
     try {
-      localStorage.setItem(languageKey, value);
+      const saved = localStorage.getItem(languageKey) as SupportedLocale;
+      if (saved && ["th", "zh-CN", "my", "km"].includes(saved)) {
+        return saved;
+      }
     } catch {
-      /* Storage may be unavailable. */
+      // Ignore
     }
-  }
-  if (reference)
-    return (
-      <section className="public-payment public-success" lang={language}>
-        <LanguageSelector language={language} setLanguage={setLanguage} />
-        <CheckCircle2 size={64} aria-hidden="true" />
-        <h1>{t.success}</h1>
-        <p>{t.reference}</p>
-        <strong className="payment-reference">{reference}</strong>
-        {trackingToken && (
-          <a
-            className="button button-primary"
-            href={`/pay/status/${trackingToken}`}
+    return "th";
+  });
+
+  const changeLanguage = (newLocale: SupportedLocale) => {
+    setLocale(newLocale);
+    try {
+      localStorage.setItem(languageKey, newLocale);
+    } catch {
+      // Ignore
+    }
+  };
+
+  const t = getTranslation(locale);
+
+  // Form State (Persisted across language changes)
+  const [step, setStep] = useState<number>(1);
+  const [hn, setHn] = useState<string>("");
+  const [vnAn, setVnAn] = useState<string>("");
+  const [patientName, setPatientName] = useState<string>("");
+  const [payerName, setPayerName] = useState<string>("");
+  const [payerPhone, setPayerPhone] = useState<string>("");
+  const [declaredAmount, setDeclaredAmount] = useState<string>("");
+  const [sourceBank, setSourceBank] = useState<string>("");
+  const [transferDateTime, setTransferDateTime] = useState<string>(
+    new Date().toISOString().slice(0, 16)
+  );
+  const [note, setNote] = useState<string>("");
+
+  // File Upload State
+  const [file, setFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string>("");
+  const [heicWarning, setHeicWarning] = useState<boolean>(false);
+  const [fileError, setFileError] = useState<string>("");
+
+  // Payment QR State
+  const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
+
+  // Submission State
+  const [submissionKey] = useState<string>(() => crypto.randomUUID());
+  const [busy, setBusy] = useState<boolean>(false);
+  const [formError, setFormError] = useState<string>("");
+  const [resultData, setResultData] = useState<{
+    paymentNo: string;
+    statusToken: string;
+  } | null>(null);
+
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  // Generate PromptPay QR code whenever amount or bank code changes
+  useEffect(() => {
+    let active = true;
+    const generateQr = async () => {
+      const accountNo = pointData.bankAccount.accountNumber || pointData.bankAccount.code;
+      const payload = generatePromptPayPayload(accountNo, declaredAmount || undefined);
+      const url = await generateQrDataUrl(payload);
+      if (active) {
+        setQrCodeUrl(url);
+      }
+    };
+    void generateQr();
+    return () => {
+      active = false;
+    };
+  }, [pointData, declaredAmount]);
+
+  // Handle File Selection
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setFileError("");
+    setHeicWarning(false);
+    const selected = e.target.files?.[0];
+    if (!selected) return;
+
+    // HEIC check
+    const filename = selected.name.toLowerCase();
+    if (filename.endsWith(".heic") || filename.endsWith(".heif")) {
+      setHeicWarning(true);
+      return;
+    }
+
+    if (selected.size > 10 * 1024 * 1024) {
+      setFileError(t.validation.fileTooLarge);
+      return;
+    }
+
+    const validMimes = ["image/jpeg", "image/png", "image/webp"];
+    if (!validMimes.includes(selected.type) && !filename.match(/\.(jpg|jpeg|png|webp)$/i)) {
+      setFileError(t.slipUpload.unsupportedFileError);
+      return;
+    }
+
+    setFile(selected);
+    const url = URL.createObjectURL(selected);
+    setFilePreviewUrl(url);
+  };
+
+  const handleRemoveFile = () => {
+    setFile(null);
+    if (filePreviewUrl) {
+      URL.revokeObjectURL(filePreviewUrl);
+      setFilePreviewUrl("");
+    }
+    setHeicWarning(false);
+    setFileError("");
+  };
+
+  // Step Validation
+  const validateStep2 = (): boolean => {
+    setFormError("");
+    if (!hn.trim()) {
+      setFormError(t.validation.requiredHN);
+      return false;
+    }
+    if (!patientName.trim()) {
+      setFormError(t.validation.requiredPatientName);
+      return false;
+    }
+    if (!declaredAmount || parseFloat(declaredAmount) <= 0) {
+      setFormError(t.validation.invalidAmount);
+      return false;
+    }
+    if (!sourceBank.trim()) {
+      setFormError(t.validation.requiredBank);
+      return false;
+    }
+    if (!transferDateTime) {
+      setFormError(t.validation.requiredTransferTime);
+      return false;
+    }
+    return true;
+  };
+
+  const validateStep4 = (): boolean => {
+    setFormError("");
+    if (!file) {
+      setFormError(t.validation.requiredSlip);
+      return false;
+    }
+    return true;
+  };
+
+  const handleSubmit = async () => {
+    if (busy) return;
+    setFormError("");
+    setBusy(true);
+
+    try {
+      const formData = new FormData();
+      formData.append("token", token);
+      formData.append("challenge", proof);
+      formData.append("submissionKey", submissionKey);
+      formData.append("deviceId", getOrCreateDeviceId());
+      formData.append("hn", hn.trim());
+      if (vnAn.trim()) formData.append("vn", vnAn.trim());
+      formData.append("patientName", patientName.trim());
+      if (payerName.trim()) formData.append("payerName", payerName.trim());
+      if (payerPhone.trim()) formData.append("payerPhone", payerPhone.trim());
+      formData.append("declaredAmount", declaredAmount);
+      formData.append("sourceBank", sourceBank.trim());
+      formData.append("transferDateTime", new Date(transferDateTime).toISOString());
+      if (note.trim()) formData.append("note", note.trim());
+      if (file) formData.append("file", file);
+
+      const response = await fetch("/api/v1/payment/submit", {
+        method: "POST",
+        body: formData,
+      });
+
+      const resJson = await response.json();
+      if (!response.ok || !resJson.success) {
+        throw new Error(resJson.error?.message || "Failed to submit payment");
+      }
+
+      setResultData(resJson.data);
+      setStep(6);
+    } catch (err: unknown) {
+      setFormError(err instanceof Error ? err.message : "Error submitting slip");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Render Language Selector Bar
+  const renderLanguageBar = () => (
+    <div className="language-selector-bar" role="region" aria-label="Language Selector">
+      <div className="language-selector-title">
+        <Globe size={18} aria-hidden="true" />
+        <span>{t.headers.selectLanguage}</span>
+      </div>
+      <div className="language-buttons">
+        {(
+          [
+            { code: "th", name: "ไทย" },
+            { code: "zh-CN", name: "中文" },
+            { code: "my", name: "မြန်မာ" },
+            { code: "km", name: "ខ្មែរ" },
+          ] as const
+        ).map((item) => (
+          <button
+            key={item.code}
+            type="button"
+            className={`lang-btn ${locale === item.code ? "active" : ""}`}
+            onClick={() => changeLanguage(item.code)}
           >
-            {t.track}
-          </a>
-        )}
-        <p>{t.successHelp}</p>
-      </section>
-    );
-  return (
-    <main className="public-payment mobile-payment" lang={language}>
-      <LanguageSelector language={language} setLanguage={setLanguage} />
-      <header className="mobile-payment-head">
-        <Image
-          src="/brand/pdh-finance-logo.png"
-          width={82}
-          height={82}
-          alt="Pluak Daeng Hospital"
-          priority
-        />
-        <div>
-          <p className="eyebrow">PDH SMART PAYMENT</p>
-          <h1>{t.title}</h1>
-          <p>{pointName}</p>
-        </div>
-      </header>
-      <div className="mobile-progress">
-        {t.steps.map((step, index) => (
-          <span className={index === 0 ? "active" : undefined} key={step}>
-            {step}
-          </span>
+            {item.name}
+          </button>
         ))}
       </div>
-      <form
-        className="mobile-payment-form"
-        onSubmit={async (event) => {
-          event.preventDefault();
-          if (busy || !(await confirmAction(t.confirm))) return;
-          setBusy(true);
-          const data = new FormData(event.currentTarget);
-          data.set("submissionKey", key);
-          data.set("deviceId", deviceId());
-          data.set("token", token);
-          data.set("challenge", proof);
-          data.set(
-            "transferDateTime",
-            `${String(data.get("transferDateTime"))}:00+07:00`,
-          );
-          try {
-            const response = await fetch("/api/v1/payments", {
-              method: "POST",
-              body: data,
-            });
-            const result = await response.json();
-            if (!response.ok)
-              throw new Error(
-                `${result.error?.message} · ${result.meta?.requestId}`,
-              );
-            setReference(result.data.paymentNo);
-            setTrackingToken(result.data.statusToken ?? "");
-          } catch (error) {
-            await showError(error);
-          } finally {
-            setBusy(false);
-          }
-        }}
-      >
-        <section className="mobile-form-section">
-          <div className="section-number">1</div>
+    </div>
+  );
+
+  // Render Step Progress
+  const renderProgress = () => (
+    <div className="form-steps-progress" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={6}>
+      <div className="step-pill-grid">
+        <span className={`step-pill ${step >= 1 ? "active" : ""}`}>1</span>
+        <span className={`step-pill ${step >= 2 ? "active" : ""}`}>2</span>
+        <span className={`step-pill ${step >= 3 ? "active" : ""}`}>3</span>
+        <span className={`step-pill ${step >= 4 ? "active" : ""}`}>4</span>
+        <span className={`step-pill ${step >= 5 ? "active" : ""}`}>5</span>
+        <span className={`step-pill ${step >= 6 ? "active" : ""}`}>6</span>
+      </div>
+    </div>
+  );
+
+  return (
+    <main className="public-payment" lang={locale}>
+      {/* Header */}
+      <header className="payment-header">
+        <div className="hospital-brand">
+          <Image
+            src="/brand/pdh-finance-logo.png"
+            width={72}
+            height={72}
+            alt={t.hospitalName}
+            priority
+          />
           <div>
-            <h2>{t.patientTitle}</h2>
-            <p>{t.patientHelp}</p>
+            <h1>{t.hospitalName}</h1>
+            <p>{pointData.name} ({pointData.code})</p>
           </div>
-          <label>
-            HN <span>*</span>
-            <input
-              name="hn"
-              inputMode="text"
-              autoComplete="off"
-              required
-              maxLength={40}
-              placeholder={t.example}
-            />
-          </label>
-          <label>
-            {t.patientName} <span>*</span>
-            <input
-              name="patientName"
-              autoComplete="name"
-              required
-              maxLength={160}
-            />
-          </label>
-          <div className="mobile-two-columns">
-            <label>
-              VN ({t.optional})<input name="vn" maxLength={40} />
-            </label>
-            <label>
-              AN ({t.optional})<input name="an" maxLength={40} />
-            </label>
-          </div>
-        </section>
-        <section className="mobile-form-section">
-          <div className="section-number">2</div>
-          <div>
-            <h2>{t.transferTitle}</h2>
-            <p>{t.transferHelp}</p>
-          </div>
-          <label>
-            {t.amount} <span>*</span>
-            <input
-              name="declaredAmount"
-              type="number"
-              inputMode="decimal"
-              step="0.01"
-              min="0.01"
-              required
-              placeholder="0.00"
-            />
-          </label>
-          <label>
-            {t.bank} <span>*</span>
-            <input
-              name="sourceBank"
-              required
-              maxLength={120}
-              placeholder={t.bankPlaceholder}
-            />
-          </label>
-          <label>
-            {t.transferTime} <span>*</span>
-            <input name="transferDateTime" type="datetime-local" required />
-          </label>
-          <div className="mobile-two-columns">
-            <label>
-              {t.payerName}
-              <input name="payerName" autoComplete="name" maxLength={160} />
-            </label>
-            <label>
-              {t.phone}
-              <input
-                name="payerPhone"
-                type="tel"
-                inputMode="tel"
-                autoComplete="tel"
-                maxLength={30}
-              />
-            </label>
-          </div>
-        </section>
-        <section className="mobile-form-section">
-          <div className="section-number">3</div>
-          <div>
-            <h2>{t.slipTitle}</h2>
-            <p>{t.slipHelp}</p>
-          </div>
-          <label className="slip-drop">
-            <Camera size={32} aria-hidden="true" />
-            <strong>{t.chooseFile}</strong>
-            <span>{t.fileTypes}</span>
-            <input
-              name="file"
-              type="file"
-              accept="image/jpeg,image/png,image/webp,application/pdf"
-              capture="environment"
-              required
-              onChange={(event) => {
-                if (preview) URL.revokeObjectURL(preview);
-                const file = event.target.files?.[0];
-                setPreview(
-                  file?.type.startsWith("image/")
-                    ? URL.createObjectURL(file)
-                    : "",
-                );
+        </div>
+        {renderLanguageBar()}
+      </header>
+
+      {renderProgress()}
+
+      {formError && (
+        <div className="alert alert-danger" role="alert">
+          <AlertCircle size={20} />
+          <span>{formError}</span>
+        </div>
+      )}
+
+      {/* STEP 1: Select Language */}
+      {step === 1 && (
+        <section className="step-card fade-in">
+          <h2>{t.headers.selectLanguage}</h2>
+          <p className="step-desc">
+            กรุณาเลือกภาษาที่ต้องการใช้งาน / Please select your preferred language
+          </p>
+
+          <div className="language-grid-large">
+            <button
+              type="button"
+              className={`lang-card-large ${locale === "th" ? "selected" : ""}`}
+              onClick={() => {
+                changeLanguage("th");
+                setStep(2);
               }}
-            />
-          </label>
-          {preview && (
-            <div className="slip-preview">
-              <Image
-                unoptimized
-                src={preview}
-                width={600}
-                height={800}
-                alt={t.preview}
+            >
+              <strong className="lang-title">ไทย (Thai)</strong>
+              <span className="lang-subtitle">ระบบรับชำระเงิน โรงพยาบาลปลวกแดง</span>
+            </button>
+
+            <button
+              type="button"
+              className={`lang-card-large ${locale === "zh-CN" ? "selected" : ""}`}
+              onClick={() => {
+                changeLanguage("zh-CN");
+                setStep(2);
+              }}
+            >
+              <strong className="lang-title">中文 (Simplified Chinese)</strong>
+              <span className="lang-subtitle">普罗登医院 提交付款凭证系统</span>
+            </button>
+
+            <button
+              type="button"
+              className={`lang-card-large ${locale === "my" ? "selected" : ""}`}
+              onClick={() => {
+                changeLanguage("my");
+                setStep(2);
+              }}
+            >
+              <strong className="lang-title">မြန်မာ (Burmese)</strong>
+              <span className="lang-subtitle">ပလွက်ဒဲင် ဆေးရုံ ငွေလွှဲပြေစာ တင်ရန်</span>
+            </button>
+
+            <button
+              type="button"
+              className={`lang-card-large ${locale === "km" ? "selected" : ""}`}
+              onClick={() => {
+                changeLanguage("km");
+                setStep(2);
+              }}
+            >
+              <strong className="lang-title">ខ្មែរ (Khmer)</strong>
+              <span className="lang-subtitle">មន្ទីរពេទ្យផ្លួកដែង ផ្ញើភស្តុតាងការទូទាត់</span>
+            </button>
+          </div>
+
+          <div className="step-actions">
+            <button
+              type="button"
+              className="button button-primary button-large"
+              onClick={() => setStep(2)}
+            >
+              {t.actions.next} <ChevronRight size={18} />
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* STEP 2: Review Billing / Fill Details */}
+      {step === 2 && (
+        <section className="step-card fade-in">
+          <h2>{t.headers.billingDetails}</h2>
+
+          <div className="info-box-brand">
+            <strong>{pointData.name}</strong>
+            {pointData.location && <p>{pointData.location}</p>}
+          </div>
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (validateStep2()) setStep(3);
+            }}
+          >
+            <div className="form-group">
+              <label htmlFor="hn-input">
+                {t.patientInfo.hnLabel} <span className="required-star">*</span>
+              </label>
+              <input
+                id="hn-input"
+                type="text"
+                className="form-control"
+                placeholder={t.patientInfo.hnPlaceholder}
+                value={hn}
+                onChange={(e) => setHn(e.target.value)}
+                required
               />
             </div>
-          )}
-          <label>
-            {t.note}
-            <input
-              name="note"
-              maxLength={2000}
-              placeholder={t.notePlaceholder}
-            />
-          </label>
+
+            <div className="form-group">
+              <label htmlFor="patientName-input">
+                {t.patientInfo.patientNameLabel} <span className="required-star">*</span>
+              </label>
+              <input
+                id="patientName-input"
+                type="text"
+                className="form-control"
+                placeholder={t.patientInfo.patientNamePlaceholder}
+                value={patientName}
+                onChange={(e) => setPatientName(e.target.value)}
+                required
+              />
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="vnan-input">{t.patientInfo.vnAnLabel}</label>
+                <input
+                  id="vnan-input"
+                  type="text"
+                  className="form-control"
+                  placeholder="VN / AN"
+                  value={vnAn}
+                  onChange={(e) => setVnAn(e.target.value)}
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="payerName-input">{t.patientInfo.payerNameLabel}</label>
+                <input
+                  id="payerName-input"
+                  type="text"
+                  className="form-control"
+                  placeholder={t.patientInfo.payerNamePlaceholder}
+                  value={payerName}
+                  onChange={(e) => setPayerName(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="amount-input">
+                  {t.patientInfo.declaredAmountLabel} <span className="required-star">*</span>
+                </label>
+                <input
+                  id="amount-input"
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  className="form-control amount-input"
+                  placeholder="0.00"
+                  value={declaredAmount}
+                  onChange={(e) => setDeclaredAmount(e.target.value)}
+                  required
+                />
+                <small className="help-text">{t.patientInfo.declaredAmountHelp}</small>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="phone-input">{t.patientInfo.phoneLabel}</label>
+                <input
+                  id="phone-input"
+                  type="tel"
+                  className="form-control"
+                  placeholder={t.patientInfo.phonePlaceholder}
+                  value={payerPhone}
+                  onChange={(e) => setPayerPhone(e.target.value)}
+                />
+              </div>
+            </div>
+
+            <div className="form-row">
+              <div className="form-group">
+                <label htmlFor="bank-input">
+                  {t.patientInfo.sourceBankLabel} <span className="required-star">*</span>
+                </label>
+                <input
+                  id="bank-input"
+                  type="text"
+                  className="form-control"
+                  placeholder={t.patientInfo.sourceBankPlaceholder}
+                  value={sourceBank}
+                  onChange={(e) => setSourceBank(e.target.value)}
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="time-input">
+                  {t.patientInfo.transferDateTimeLabel} <span className="required-star">*</span>
+                </label>
+                <input
+                  id="time-input"
+                  type="datetime-local"
+                  className="form-control"
+                  value={transferDateTime}
+                  onChange={(e) => setTransferDateTime(e.target.value)}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="note-input">{t.patientInfo.noteLabel}</label>
+              <textarea
+                id="note-input"
+                className="form-control"
+                rows={2}
+                placeholder={t.patientInfo.notePlaceholder}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
+
+            <div className="step-actions">
+              <button
+                type="button"
+                className="button button-outline"
+                onClick={() => setStep(1)}
+              >
+                <ChevronLeft size={18} /> {t.actions.back}
+              </button>
+              <button type="submit" className="button button-primary">
+                {t.actions.next} <ChevronRight size={18} />
+              </button>
+            </div>
+          </form>
         </section>
-        <div hidden>
-          <label>
-            Website
-            <input name="website" tabIndex={-1} autoComplete="off" />
-          </label>
-        </div>
-        <aside className="privacy-note">
-          <ShieldCheck size={24} />
-          <p>
-            <strong>{t.privacyTitle}</strong>
+      )}
+
+      {/* STEP 3: Make Payment / QR View */}
+      {step === 3 && (
+        <section className="step-card fade-in">
+          <h2>{t.headers.makePayment}</h2>
+
+          <div className="notice-box-warning" role="alert">
+            <p>{t.bankDetails.pointQrVsPaymentQrNotice}</p>
+          </div>
+
+          <div className="qr-payment-container">
+            <div className="bank-account-card">
+              <h3>{t.bankDetails.receivingAccountTitle}</h3>
+              <dl className="bank-details-list">
+                <div>
+                  <dt>{t.bankDetails.bankName}:</dt>
+                  <dd><strong>{pointData.bankAccount.bankName}</strong></dd>
+                </div>
+                <div>
+                  <dt>{t.bankDetails.accountName}:</dt>
+                  <dd><strong>{pointData.bankAccount.accountName}</strong></dd>
+                </div>
+                <div>
+                  <dt>{t.bankDetails.accountNumber}:</dt>
+                  <dd><strong className="highlight-acc">{pointData.bankAccount.accountNumber}</strong></dd>
+                </div>
+                <div>
+                  <dt>{t.patientInfo.declaredAmountLabel}:</dt>
+                  <dd><strong className="highlight-amount">{parseFloat(declaredAmount || "0").toFixed(2)} {t.patientInfo.currency}</strong></dd>
+                </div>
+              </dl>
+            </div>
+
+            <div className="qr-code-box">
+              <h4>{t.bankDetails.promptPayQr}</h4>
+              <p className="qr-help">{t.bankDetails.promptPayHelp}</p>
+
+              {qrCodeUrl ? (
+                <div className="qr-img-wrapper">
+                  <Image
+                    unoptimized
+                    src={qrCodeUrl}
+                    alt="PromptPay QR Code"
+                    width={240}
+                    height={240}
+                    priority
+                  />
+                </div>
+              ) : (
+                <div className="qr-placeholder">
+                  <QrCode size={64} />
+                  <span>กำลังสร้าง QR...</span>
+                </div>
+              )}
+
+              {qrCodeUrl && (
+                <div className="qr-download-helper">
+                  <a
+                    href={qrCodeUrl}
+                    download={`promptpay_${pointData.code}.png`}
+                    className="button button-outline button-small"
+                  >
+                    <Download size={16} /> {t.bankDetails.saveQrButton}
+                  </a>
+                  <p className="small-help">{t.bankDetails.saveQrInstructions}</p>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="step-actions">
+            <button
+              type="button"
+              className="button button-outline"
+              onClick={() => setStep(2)}
+            >
+              <ChevronLeft size={18} /> {t.actions.back}
+            </button>
+            <button
+              type="button"
+              className="button button-primary"
+              onClick={() => setStep(4)}
+            >
+              {t.actions.next} (แนบสลิป) <ChevronRight size={18} />
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* STEP 4: Attach Slip */}
+      {step === 4 && (
+        <section className="step-card fade-in">
+          <h2>{t.headers.attachSlip}</h2>
+          <p className="step-desc">{t.slipUpload.instructions}</p>
+
+          <input
+            ref={cameraInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            capture="environment"
+            className="sr-only"
+            onChange={handleFileChange}
+          />
+          <input
+            ref={galleryInputRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            className="sr-only"
+            onChange={handleFileChange}
+          />
+
+          {heicWarning && (
+            <div className="alert alert-warning" role="alert">
+              <AlertCircle size={20} />
+              <span>{t.slipUpload.heicWarning}</span>
+            </div>
+          )}
+
+          {fileError && (
+            <div className="alert alert-danger" role="alert">
+              <AlertCircle size={20} />
+              <span>{fileError}</span>
+            </div>
+          )}
+
+          {!file ? (
+            <div className="upload-options-grid">
+              <button
+                type="button"
+                className="upload-option-btn camera-btn"
+                onClick={() => cameraInputRef.current?.click()}
+              >
+                <Camera size={36} />
+                <strong>{t.slipUpload.takePhoto}</strong>
+              </button>
+
+              <button
+                type="button"
+                className="upload-option-btn gallery-btn"
+                onClick={() => galleryInputRef.current?.click()}
+              >
+                <ImageIcon size={36} />
+                <strong>{t.slipUpload.chooseGallery}</strong>
+              </button>
+            </div>
+          ) : (
+            <div className="file-preview-card">
+              <h3>{t.slipUpload.previewTitle}</h3>
+              {filePreviewUrl && (
+                <div className="preview-img-container">
+                  <Image
+                    unoptimized
+                    src={filePreviewUrl}
+                    alt="Slip Preview"
+                    width={320}
+                    height={400}
+                    style={{ objectFit: "contain" }}
+                  />
+                </div>
+              )}
+              <p className="file-name-text">
+                {file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)
+              </p>
+
+              <div className="file-preview-actions">
+                <button
+                  type="button"
+                  className="button button-outline button-small"
+                  onClick={() => galleryInputRef.current?.click()}
+                >
+                  <RefreshCw size={16} /> {t.slipUpload.changeImage}
+                </button>
+                <button
+                  type="button"
+                  className="button button-danger button-small"
+                  onClick={handleRemoveFile}
+                >
+                  <Trash2 size={16} /> {t.slipUpload.removeImage}
+                </button>
+              </div>
+            </div>
+          )}
+
+          <p className="small-help text-center" style={{ marginTop: "1rem" }}>
+            {t.slipUpload.supportedFormats}
             <br />
-            {t.privacy}
+            {t.slipUpload.refreshWarning}
           </p>
-        </aside>
-        <button
-          className="button button-primary mobile-submit"
-          disabled={busy}
-          type="submit"
-        >
-          <Upload size={20} />
-          {busy ? t.submitting : t.submit}
-        </button>
-      </form>
+
+          <div className="step-actions">
+            <button
+              type="button"
+              className="button button-outline"
+              onClick={() => setStep(3)}
+            >
+              <ChevronLeft size={18} /> {t.actions.back}
+            </button>
+            <button
+              type="button"
+              className="button button-primary"
+              disabled={!file}
+              onClick={() => {
+                if (validateStep4()) setStep(5);
+              }}
+            >
+              {t.actions.next} <ChevronRight size={18} />
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* STEP 5: Confirm Before Submission */}
+      {step === 5 && (
+        <section className="step-card fade-in">
+          <h2>{t.headers.confirmSubmission}</h2>
+
+          <div className="summary-card">
+            <dl className="summary-list">
+              <div>
+                <dt>{t.headers.paymentPoint}:</dt>
+                <dd><strong>{pointData.name}</strong></dd>
+              </div>
+              <div>
+                <dt>{t.patientInfo.hnLabel}:</dt>
+                <dd><strong>{hn}</strong></dd>
+              </div>
+              <div>
+                <dt>{t.patientInfo.patientNameLabel}:</dt>
+                <dd><strong>{patientName}</strong></dd>
+              </div>
+              <div>
+                <dt>{t.patientInfo.declaredAmountLabel}:</dt>
+                <dd><strong className="highlight-amount">{parseFloat(declaredAmount).toFixed(2)} {t.patientInfo.currency}</strong></dd>
+              </div>
+              <div>
+                <dt>{t.patientInfo.sourceBankLabel}:</dt>
+                <dd>{sourceBank}</dd>
+              </div>
+              <div>
+                <dt>{t.patientInfo.transferDateTimeLabel}:</dt>
+                <dd>{formatDate(transferDateTime, locale)}</dd>
+              </div>
+              {payerName && (
+                <div>
+                  <dt>{t.patientInfo.payerNameLabel}:</dt>
+                  <dd>{payerName}</dd>
+                </div>
+              )}
+            </dl>
+
+            {filePreviewUrl && (
+              <div className="summary-thumbnail">
+                <span>สลิปที่แนบ:</span>
+                <Image
+                  unoptimized
+                  src={filePreviewUrl}
+                  alt="Thumbnail"
+                  width={120}
+                  height={150}
+                  style={{ objectFit: "cover", borderRadius: "8px" }}
+                />
+              </div>
+            )}
+          </div>
+
+          <div className="step-actions">
+            <button
+              type="button"
+              className="button button-outline"
+              disabled={busy}
+              onClick={() => setStep(4)}
+            >
+              {t.actions.edit}
+            </button>
+            <button
+              type="button"
+              className="button button-primary button-large"
+              disabled={busy}
+              onClick={handleSubmit}
+            >
+              {busy ? (
+                <>
+                  <RefreshCw className="spin" size={18} /> {t.actions.submitting}
+                </>
+              ) : (
+                <>
+                  <ShieldCheck size={18} /> {t.actions.confirmSubmit}
+                </>
+              )}
+            </button>
+          </div>
+        </section>
+      )}
+
+      {/* STEP 6: Submission Result */}
+      {step === 6 && resultData && (
+        <section className="step-card fade-in text-center">
+          <div className="success-icon-wrap">
+            <CheckCircle2 size={64} className="text-success" />
+          </div>
+
+          <h2>{t.headers.submissionSuccess}</h2>
+          <p className="text-success-dark"><strong>{t.status.receivedMessage}</strong></p>
+
+          <div className="tracking-code-card">
+            <span className="tracking-label">{t.status.trackingCodeLabel}</span>
+            <strong className="tracking-number">{resultData.paymentNo}</strong>
+          </div>
+
+          <div className="notice-box-disclaimer" role="alert">
+            <p>{t.status.receiptDisclaimer}</p>
+          </div>
+
+          <div className="result-actions">
+            <a
+              href={`/pay/status/${resultData.statusToken}`}
+              className="button button-primary button-large"
+            >
+              <ExternalLink size={18} /> {t.actions.checkStatus}
+            </a>
+          </div>
+        </section>
+      )}
     </main>
   );
 }

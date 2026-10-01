@@ -294,9 +294,17 @@ export async function publicPaymentStatus(rawToken: string) {
       verifiedAt: true,
       receiptedAt: true,
       receiptNo: true,
-      point: { select: { name: true } },
+      declaredAmount: true,
+      verifiedAmount: true,
+      point: { select: { name: true, qrToken: true } },
+      statusHistory: {
+        take: 5,
+        orderBy: { version: "desc" },
+        select: { toStatus: true, reason: true, createdAt: true },
+      },
     },
   });
   if (!payment) throw new AppError("NOT_FOUND", 404, "ไม่พบรายการ");
   return payment;
 }
+
