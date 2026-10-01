@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: pdhpay-mysql-prod
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-StrongRootPassword10832!}
+      MYSQL_DATABASE: ${DB_NAME:-pdhpay}
+      MYSQL_USER: ${DB_USER:-pdh_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-PdhpayProdPassword10832!}
+    # Bind 3306 ONLY to localhost 127.0.0.1 for security
+    ports:
+      - "127.0.0.1:3306:3306"
+    volumes:
+      - pdhpay_mysql_prod_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -p$${MYSQL_ROOT_PASSWORD} || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - web-network
+
+  web:
+    image: ${IMAGE_NAME:-ghcr.io/pharmacisttom/pdhpay:latest}
+    container_name: pdhpay-web-prod
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.production
+    depends_on:
+      mysql:
+        condition: service_healthy
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    networks:
+      - web-network
+
+networks:
+  web-network:
+    external: true
+
+volumes:
+  pdhpay_mysql_prod_data:
+    driver: local

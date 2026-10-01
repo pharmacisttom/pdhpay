@@ -1,25 +1,23 @@
 # ==========================================
 # STAGE 1: Install Dependencies
 # ==========================================
-FROM node:22-alpine AS deps
+FROM node:20-alpine AS deps
 RUN apk add --no-cache libc6-compat
 WORKDIR /app
 
-# Copy lock files and package definitions for clean deterministic install
+# Copy lock files and package definitions
 COPY package.json package-lock.json ./
 RUN npm ci
 
 # ==========================================
 # STAGE 2: Build Application
 # ==========================================
-FROM node:22-alpine AS builder
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# Copy dependencies and source code
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Set environment for production build
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
 
@@ -30,25 +28,35 @@ RUN npm run build
 # ==========================================
 # STAGE 3: Production Runner (Minimal Container)
 # ==========================================
-FROM node:22-alpine AS runner
+FROM node:20-alpine AS runner
 WORKDIR /app
+
+# Install curl for healthcheck
+RUN apk add --no-cache curl
 
 ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 ENV NEXT_TELEMETRY_DISABLED=1
 
-# Create non-root user for security
+# Create non-root user "nextjs" (UID 1001) for enterprise security
 RUN addgroup --system --gid 1001 nodejs && \
     adduser --system --uid 1001 nextjs
 
-# Copy public static files and standalone build output
+# Copy static assets and standalone build output
 COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Ensure upload directory permissions
+RUN mkdir -p /app/public/uploads/slips && chown -R nextjs:nodejs /app/public/uploads
+
 USER nextjs
 
 EXPOSE 3000
+
+# Container Healthcheck targeting /api/health endpoint
+HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
+  CMD curl -f http://localhost:3000/api/health || exit 1
 
 CMD ["node", "server.js"]

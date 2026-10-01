@@ -1,7 +1,35 @@
 import type { NextConfig } from "next";
+
 const config: NextConfig = {
   output: "standalone",
+  compress: true,
   poweredByHeader: false,
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "**.googleusercontent.com",
+      },
+      {
+        protocol: "https",
+        hostname: "drive.google.com",
+      },
+      {
+        protocol: "https",
+        hostname: "*.pdhpay.pluakdaenghospital.cloud",
+      },
+    ],
+  },
+  experimental: {
+    serverActions: {
+      allowedOrigins: [
+        "localhost:3000",
+        "127.0.0.1:3000",
+        "pdhpay.pluakdaenghospital.cloud",
+        "*.pdhpay.pluakdaenghospital.cloud",
+      ],
+    },
+  },
   async headers() {
     return [
       {
@@ -12,7 +40,7 @@ const config: NextConfig = {
           { key: "Referrer-Policy", value: "same-origin" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=(self), microphone=(), geolocation=()",
           },
           ...(process.env.NODE_ENV === "production"
             ? [
@@ -27,11 +55,12 @@ const config: NextConfig = {
             value:
               "default-src 'self'; script-src 'self' 'unsafe-inline'" +
               (process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "") +
-              "; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
+              "; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self' https:; font-src 'self' data:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'",
           },
         ],
       },
     ];
   },
 };
+
 export default config;

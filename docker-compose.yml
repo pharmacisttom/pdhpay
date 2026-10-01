@@ -1,38 +1,55 @@
-version: "3.8"
+version: '3.8'
 
 services:
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: pdhpay_app
-    restart: always
-    ports:
-      - "3000:3000"
-    env_file:
-      - .env.production
-    depends_on:
-      db:
-        condition: service_healthy
-
-  db:
-    image: mariadb:10.11
-    container_name: pdhpay_db
+  mysql:
+    image: mysql:8.0
+    container_name: pdhpay-mysql-dev
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: RootSecretPassword123!
-      MYSQL_DATABASE: pdhpay_prod
-      MYSQL_USER: pdhuser
-      MYSQL_PASSWORD: StrongProductionPassword123!
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: pdhpay
+      MYSQL_USER: pdh_user
+      MYSQL_PASSWORD: Pdhpay10832Password
     ports:
       - "3306:3306"
     volumes:
-      - mariadb_data:/var/lib/mysql
+      - mysql_dev_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "healthcheck-sh", "--connect", "--innodb_initialized"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u root -prootpassword || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 15s
+    networks:
+      - pdhpay-net
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pdhpay-web-dev
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - HOSTNAME=0.0.0.0
+      - DATABASE_URL=mysql://pdh_user:Pdhpay10832Password@mysql:3306/pdhpay
+      - AUTH_SECRET=dev_secret_key_minimum_32_characters_long_12345
+      - TOTP_ENCRYPTION_KEY=WnVyYmluYUNsZWFuS2V5Rm9yMkZBMzJCeXRlczA1
+    env_file:
+      - .env.development
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - pdhpay-net
+
+networks:
+  pdhpay-net:
+    driver: bridge
 
 volumes:
-  mariadb_data:
+  mysql_dev_data:
+    driver: local
