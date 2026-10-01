@@ -92,28 +92,54 @@ p {
   color: #b4c4db;
   margin-top: 0.3rem;
 }
-.sidebar nav {
+.sidebar nav,
+.sidebar-nav {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 1.25rem;
+  overflow-y: auto;
+}
+.sidebar-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.sidebar-group-title {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-weight: 700;
+  color: #8ce6d6;
+  padding: 0 0.75rem 0.2rem 0.75rem;
+  opacity: 0.92;
+}
+.sidebar-group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
 }
 .sidebar nav a {
   display: flex;
-  gap: 0.8rem;
+  gap: 0.75rem;
   align-items: center;
   color: #d4dfee;
-  padding: 0.75rem;
+  padding: 0.65rem 0.75rem;
   border-radius: 7px;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
+  transition: all 0.15s ease-in-out;
 }
 .sidebar nav a:hover {
-  background: rgba(255, 255, 255, 0.13);
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
   text-decoration: none;
+  transform: translateX(2px);
 }
 .sidebar-footer {
   margin-top: auto;
   font-size: 0.875rem;
   color: #b4c4db;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 .main {
   min-width: 0;

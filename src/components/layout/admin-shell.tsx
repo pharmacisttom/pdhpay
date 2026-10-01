@@ -9,72 +9,139 @@ import {
   Settings,
   TableProperties,
   HardDrive,
+  CheckCircle2,
+  Clock,
+  MapPin,
+  Landmark,
 } from "lucide-react";
 import type { Context } from "@/core/auth/authorization";
 import { ApiForm } from "@/components/shared/api-form";
-const links = [
+
+type NavItem = {
+  path: string;
+  label: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  permission: string | null;
+};
+
+type NavGroup = {
+  category: string;
+  items: NavItem[];
+};
+
+const navGroups: NavGroup[] = [
   {
-    path: "finance",
-    label: "การเงิน PDH",
-    icon: LayoutDashboard,
-    permission: "payment.dashboard.read",
+    category: "ภาพรวมระบบ",
+    items: [
+      {
+        path: "finance",
+        label: "แดชบอร์ดการเงิน",
+        icon: LayoutDashboard,
+        permission: "payment.dashboard.read",
+      },
+      {
+        path: "dashboard",
+        label: "ภาพรวมระบบ",
+        icon: LayoutDashboard,
+        permission: null,
+      },
+    ],
   },
   {
-    path: "dashboard",
-    label: "ภาพรวม",
-    icon: LayoutDashboard,
-    permission: null,
+    category: "ระบบการเงิน & จุดสแกน",
+    items: [
+      {
+        path: "finance/review",
+        label: "ตรวจสอบสลิปการเงิน",
+        icon: CheckCircle2,
+        permission: "payment.verify",
+      },
+      {
+        path: "finance/shifts",
+        label: "จัดการกะการทำงาน",
+        icon: Clock,
+        permission: "payment.verify",
+      },
+      {
+        path: "admin/payment-points",
+        label: "จุดรับชำระเงิน",
+        icon: MapPin,
+        permission: "payment.admin.manage",
+      },
+      {
+        path: "admin/payment-banks",
+        label: "บัญชีธนาคาร",
+        icon: Landmark,
+        permission: "payment.admin.manage",
+      },
+    ],
   },
   {
-    path: "users",
-    label: "บุคลากรและคำขอสมัคร",
-    icon: Users,
-    permission: "users.view",
+    category: "รายงาน & การเชื่อมต่อ",
+    items: [
+      {
+        path: "admin/google-sheets",
+        label: "Google Sheets Sync",
+        icon: TableProperties,
+        permission: "payment.report.export",
+      },
+      {
+        path: "admin/google-drive",
+        label: "Google Drive Sync",
+        icon: HardDrive,
+        permission: "payment.admin.manage",
+      },
+    ],
   },
   {
-    path: "roles",
-    label: "บทบาทและสิทธิ์",
-    icon: Shield,
-    permission: "roles.view",
-  },
-  {
-    path: "organizations",
-    label: "ข้อมูลองค์กร",
-    icon: Building2,
-    permission: "organizations.view",
-  },
-  {
-    path: "audit",
-    label: "บันทึกการใช้งาน",
-    icon: ScrollText,
-    permission: "audit.view",
-  },
-  { path: "settings", label: "ตั้งค่า", icon: Settings, permission: null },
-  {
-    path: "admin/departments",
-    label: "จัดการแผนก",
-    icon: Building2,
-    permission: "payment.admin.manage",
-  },
-  {
-    path: "admin/users",
-    label: "จัดการสิทธิ์ผู้ใช้",
-    icon: Users,
-    permission: "admin.users.manage",
-  },
-  {
-    path: "admin/google-sheets",
-    label: "Google Sheets",
-    icon: TableProperties,
-    permission: "payment.report.export",
-  },
-  {
-    path: "admin/google-drive",
-    label: "Google Drive",
-    icon: HardDrive,
-    permission: "payment.admin.manage",
+    category: "บริหารจัดการ & สิทธิ์",
+    items: [
+      {
+        path: "admin/users",
+        label: "จัดการสิทธิ์ผู้ใช้",
+        icon: Users,
+        permission: "admin.users.manage",
+      },
+      {
+        path: "users",
+        label: "บุคลากรและคำขอสมัคร",
+        icon: Users,
+        permission: "users.view",
+      },
+      {
+        path: "roles",
+        label: "บทบาทและสิทธิ์",
+        icon: Shield,
+        permission: "roles.view",
+      },
+      {
+        path: "admin/departments",
+        label: "จัดการแผนก",
+        icon: Building2,
+        permission: "payment.admin.manage",
+      },
+      {
+        path: "organizations",
+        label: "ข้อมูลองค์กร",
+        icon: Building2,
+        permission: "organizations.view",
+      },
+      {
+        path: "audit",
+        label: "บันทึกการใช้งาน (Logs)",
+        icon: ScrollText,
+        permission: "audit.view",
+      },
+      {
+        path: "settings",
+        label: "ตั้งค่าระบบ",
+        icon: Settings,
+        permission: null,
+      },
+    ],
   },
 ];
+
 export function AdminShell({
   ctx,
   name,
@@ -104,17 +171,29 @@ export function AdminShell({
             PDH<small>SMART PAYMENT</small>
           </span>
         </Link>
-        <nav aria-label="Main navigation">
-          {links
-            .filter(
-              (l) => !l.permission || ctx.permissions.includes(l.permission),
-            )
-            .map((l) => (
-              <Link href={`/${l.path}`} key={l.path}>
-                <l.icon size={18} />
-                {l.label}
-              </Link>
-            ))}
+        <nav aria-label="Main navigation" className="sidebar-nav">
+          {navGroups.map((group) => {
+            const visibleItems = group.items.filter(
+              (item) =>
+                !item.permission || ctx.permissions.includes(item.permission),
+            );
+
+            if (visibleItems.length === 0) return null;
+
+            return (
+              <div key={group.category} className="sidebar-group">
+                <div className="sidebar-group-title">{group.category}</div>
+                <div className="sidebar-group-items">
+                  {visibleItems.map((l) => (
+                    <Link href={`/${l.path}`} key={l.path}>
+                      <l.icon size={18} />
+                      <span>{l.label}</span>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
         </nav>
         <div className="sidebar-footer">ฝ่ายการเงิน โรงพยาบาลปลวกแดง</div>
       </aside>
