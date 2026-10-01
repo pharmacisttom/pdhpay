@@ -14,7 +14,7 @@ export default function Login() {
           {
             name: "organization",
             label: "รหัสหน่วยงาน",
-            value: "pdh-dev",
+            value: "pdh",
             autoComplete: "organization",
           },
           {
