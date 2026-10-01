@@ -1,20 +1,27 @@
+import type { Metadata } from "next";
 import { pageContext } from "@/core/auth/page";
-import { reportRows } from "@/modules/payment/services/reports";
-import { today } from "@/modules/payment/queries/transactions";
-import { ReportView } from "@/modules/payment/components/report-view";
+import { requirePermission } from "@/core/auth/authorization";
+import { DailyReportClient } from "@/modules/payment/components/daily-report-client";
 
-export default async function DailyReport({
+export const metadata: Metadata = {
+  title: "รายงานสรุปการรับชำระเงินรายวัน",
+};
+
+export default async function DailyReportPage({
   searchParams,
 }: {
   searchParams: Promise<{ date?: string }>;
 }) {
-  const date = (await searchParams).date ?? today();
-  const rows = await reportRows(await pageContext(), {
-    from: date,
-    to: date,
-    limit: 1000,
-  });
+  const ctx = await pageContext();
+  requirePermission(ctx, "payment.report.read");
+
+  const resolved = await searchParams;
+  const initialDate =
+    resolved.date || new Date().toISOString().slice(0, 10);
+
   return (
-    <ReportView title="รายงานประจำวัน" from={date} to={date} rows={rows} />
+    <section lang="th">
+      <DailyReportClient initialDate={initialDate} />
+    </section>
   );
 }

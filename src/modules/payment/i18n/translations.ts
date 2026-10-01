@@ -56,6 +56,14 @@ export interface TranslationDict {
     saveQrButton: string;
     saveQrInstructions: string;
   };
+  receipt: {
+    title: string;
+    receiptNoLabel: string;
+    dateLabel: string;
+    cashierLabel: string;
+    paymentMethodLabel: string;
+    paymentMethodValue: string;
+  };
   slipUpload: {
     title: string;
     instructions: string;
@@ -176,6 +184,14 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       saveQrButton: "บันทึกรูป QR Code ชำระเงิน",
       saveQrInstructions: "หากไม่สามารถบันทึกได้โดยตรง ให้กดค้างที่รูป QR Code แล้วเลือก 'บันทึกรูปภาพ'",
     },
+    receipt: {
+      title: "ใบเสร็จรับเงิน",
+      receiptNoLabel: "เลขที่ใบเสร็จ",
+      dateLabel: "วันที่",
+      cashierLabel: "ผู้รับเงิน",
+      paymentMethodLabel: "ช่องทางการชำระเงิน",
+      paymentMethodValue: "รับชำระผ่าน QR Code (PromptPay)",
+    },
     slipUpload: {
       title: "แนบรูปถ่ายหรือไฟล์สลิปโอนเงิน",
       instructions: "กรุณาแนบภาพสลิปที่เห็น ยอดเงิน, ชื่อบัญชีผู้รับ, วันที่-เวลาโอน และเลขอ้างอิง ชัดเจน",
@@ -294,6 +310,14 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       pointQrVsPaymentQrNotice: "⚠️ 此 QR 码用于转账至医院账户（与您扫码打开本窗口页面的 QR 码不同）。",
       saveQrButton: "保存付款二维码图片",
       saveQrInstructions: "如无法直接保存，请长按二维码图片并选择“保存图片”",
+    },
+    receipt: {
+      title: "收款收据",
+      receiptNoLabel: "收据编号",
+      dateLabel: "日期",
+      cashierLabel: "收款人",
+      paymentMethodLabel: "付款方式",
+      paymentMethodValue: "通过 QR 码 (PromptPay) 付款",
     },
     slipUpload: {
       title: "上传转账凭证图片或文件",
@@ -414,6 +438,14 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       saveQrButton: "QR Code ပုံ သိမ်းဆည်းပါ",
       saveQrInstructions: "တိုက်ရိုက်မသိမ်းနိုင်ပါက QR ပုံကို နှိပ်ထားပြီး 'Save Image' ကို ရွေးပါ",
     },
+    receipt: {
+      title: "ငွေလက်ခံပြေစာ",
+      receiptNoLabel: "ပြေစာနံပါတ်",
+      dateLabel: "ရက်စွဲ",
+      cashierLabel: "ငွေလက်ခံသူ",
+      paymentMethodLabel: "ငွေပေးချေမှု နည်းလမ်း",
+      paymentMethodValue: "QR Code (PromptPay) ဖြင့် ပေးချေသည်",
+    },
     slipUpload: {
       title: "ငွေလွှဲပြေစာ ပုံ သို့မဟုတ် ဖိုင် တင်ပါ",
       instructions: "ပမာဏ၊ လက်ခံသူ၊ ရက်စွဲနှင့် လုပ်ငန်းစဉ်နံပါတ် ရှင်းလင်းစွာ မြင်ရသော ပုံကို တင်ပါ",
@@ -532,6 +564,14 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       pointQrVsPaymentQrNotice: "⚠️ QR Code នេះគឺសម្រាប់ផ្ទេរប្រាក់ចូលគណនីមន្ទីរពេទ្យ (ខុសពី QR Code ដែលបានស្កែនដើម្បីបើកទំព័រនេះ)។",
       saveQrButton: "រក្សាទុកឡូហ្គោ QR Code",
       saveQrInstructions: "ប្រសិនបមិនអាចរក្សាទុកបាន សូមចុចលើរូប QR ឱ្យជាប់ រួចជ្រើសរើស 'Save Image'",
+    },
+    receipt: {
+      title: "វិក្កយបត្រទទួលប្រាក់",
+      receiptNoLabel: "លេខវិក្កយបត្រ",
+      dateLabel: "កាលបរិច្ឆេទ",
+      cashierLabel: "អ្នកទទួលប្រាក់",
+      paymentMethodLabel: "វិធីសាស្ត្រទូទាត់",
+      paymentMethodValue: "ទូទាត់តាម QR Code (PromptPay)",
     },
     slipUpload: {
       title: "ភ្ជាប់រូបថត ឬឯកសារបង្កាន់ដៃផ្ទេរប្រាក់",
