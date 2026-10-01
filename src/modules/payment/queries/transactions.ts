@@ -29,8 +29,27 @@ export async function listPayments(ctx:Context,p:Filters){
 }
 export async function summary(ctx:Context,p:Filters){
  requirePermission(ctx,"payment.dashboard.read");
- const groups=await db().paymentTransaction.groupBy({by:["status"],where:paymentWhere(ctx,p,true),_count:true,_sum:{declaredAmount:true,verifiedAmount:true}});
+ const where=paymentWhere(ctx,p,true);
+ const groups=await db().paymentTransaction.groupBy({by:["status"],where,_count:true,_sum:{declaredAmount:true,verifiedAmount:true}});
+ const pointGroups=await db().paymentTransaction.groupBy({by:["paymentPointId"],where,_count:true,_sum:{declaredAmount:true,verifiedAmount:true}});
+ const points=await db().paymentPoint.findMany({where:{organizationId:ctx.organizationId},select:{id:true,name:true,code:true,department:true}});
+ const pointMap=new Map(points.map(pt=>[pt.id,pt]));
  const zero=new Prisma.Decimal(0);
- return {count:groups.reduce((a,g)=>a+g._count,0),declared:groups.reduce((a,g)=>a.add(g._sum.declaredAmount??zero),zero).toFixed(2),
- verified:groups.filter(g=>["VERIFIED","RECEIPTED"].includes(g.status)).reduce((a,g)=>a.add(g._sum.verifiedAmount??zero),zero).toFixed(2),groups:groups.map(g=>({status:g.status,count:g._count,declared:g._sum.declaredAmount?.toFixed(2)??"0.00",verified:g._sum.verifiedAmount?.toFixed(2)??"0.00"}))};
+ return {
+  count:groups.reduce((a,g)=>a+g._count,0),
+  declared:groups.reduce((a,g)=>a.add(g._sum.declaredAmount??zero),zero).toFixed(2),
+  verified:groups.filter(g=>["VERIFIED","RECEIPTED"].includes(g.status)).reduce((a,g)=>a.add(g._sum.verifiedAmount??zero),zero).toFixed(2),
+  groups:groups.map(g=>({status:g.status,count:g._count,declared:g._sum.declaredAmount?.toFixed(2)??"0.00",verified:g._sum.verifiedAmount?.toFixed(2)??"0.00"})),
+  pointBreakdown:pointGroups.map(pg=>{
+   const pt=pointMap.get(pg.paymentPointId);
+   return {
+    pointId:pg.paymentPointId,
+    pointName:pt?.name??"ไม่ระบุจุด",
+    department:pt?.department??"การเงิน",
+    count:pg._count,
+    declared:pg._sum.declaredAmount?.toFixed(2)??"0.00",
+    verified:pg._sum.verifiedAmount?.toFixed(2)??"0.00",
+   };
+  })
+ };
 }

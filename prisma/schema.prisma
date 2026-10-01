@@ -19,6 +19,7 @@ model Organization {
   settings      SystemSetting[]
   paymentPoints PaymentPoint[]
   bankAccounts  BankAccount[]
+  departments   Department[]
 }
 
 model User {
@@ -437,3 +438,20 @@ model PaymentUpload {
 
   @@index([state, updatedAt])
 }
+
+model Department {
+  id             String       @id @default(uuid()) @db.Char(36)
+  organizationId String       @db.Char(36)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  code           String       @db.VarChar(40)
+  name           String       @db.VarChar(160)
+  description    String?      @db.VarChar(500)
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@unique([organizationId, id])
+  @@unique([organizationId, code])
+  @@index([organizationId, active])
+}
+

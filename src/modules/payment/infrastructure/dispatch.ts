@@ -35,6 +35,8 @@ import { googleSheetsStatus, syncReceiptedPayments } from "./google-sheets";
 import { processSlipOcr } from "../services/ocr";
 import { exportReport, reportFilters } from "../services/reports";
 import { driveStatus, testDriveConnection } from "../services/drive-admin";
+import { listDepartments, saveDepartment, departmentInput } from "../services/departments";
+import { listAdminUsers, updateUserRoles, userRoleUpdateInput } from "../services/users-admin";
 export async function dispatch(request: Request, segments: string[]) {
   return handle(request, async (requestId) => {
     const ctx = await context();
@@ -224,6 +226,30 @@ export async function dispatch(request: Request, segments: string[]) {
             })
           : [],
       };
+    }
+    if (resource === "departments") {
+      if (request.method === "GET") return listDepartments(ctx);
+      if (request.method === "POST" && !key)
+        return saveDepartment(
+          ctx,
+          await body(request, departmentInput),
+          undefined,
+          requestId,
+        );
+      if (request.method === "PATCH" && key)
+        return saveDepartment(
+          ctx,
+          await body(request, departmentInput),
+          key,
+          requestId,
+        );
+    }
+    if (resource === "users") {
+      if (request.method === "GET" && !key) return listAdminUsers(ctx);
+      if (request.method === "POST" && key && action === "roles") {
+        const input = await body(request, userRoleUpdateInput);
+        return updateUserRoles(ctx, key, input.roleIds, requestId);
+      }
     }
     throw new AppError("NOT_FOUND", 404, "ไม่พบรายการ");
   });

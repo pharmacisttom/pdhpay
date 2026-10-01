@@ -51,6 +51,18 @@ const links = [
   },
   { path: "settings", label: "ตั้งค่า", icon: Settings, permission: null },
   {
+    path: "admin/departments",
+    label: "จัดการแผนก",
+    icon: Building2,
+    permission: "payment.admin.manage",
+  },
+  {
+    path: "admin/users",
+    label: "จัดการสิทธิ์ผู้ใช้",
+    icon: Users,
+    permission: "admin.users.manage",
+  },
+  {
     path: "admin/google-sheets",
     label: "Google Sheets",
     icon: TableProperties,
