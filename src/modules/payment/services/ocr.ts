@@ -21,6 +21,30 @@ const visionResponse = z.object({
   ),
 });
 
+export function extractAmountFromSlip(ocrText: string): number | null {
+  if (!ocrText) return null;
+  const cleanText = ocrText.replace(/\s+/g, " ");
+  const amountRegex =
+    /(?:จำนวนเงิน|ยอดเงิน|ยอดเงินโอน|Amount|โอนเงินสำเร็จ)\s*[:=]?\s*([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})/i;
+  const match = cleanText.match(amountRegex);
+  if (match && match[1]) {
+    const numericString = match[1].replace(/,/g, "");
+    const parsed = parseFloat(numericString);
+    if (!isNaN(parsed)) return parsed;
+  }
+
+  const fallbackRegex = /([0-9]{1,3}(?:,[0-9]{3})*\.[0-9]{2})/g;
+  const allNumbers = [...cleanText.matchAll(fallbackRegex)]
+    .map((m) => parseFloat(m[1].replace(/,/g, "")))
+    .filter((num) => !isNaN(num) && num > 0);
+
+  if (allNumbers.length > 0) {
+    return allNumbers[allNumbers.length - 1];
+  }
+
+  return null;
+}
+
 export function extractSlipFields(text: string) {
   const normalized = text.replace(/,/g, "").replace(/\s+/g, " ");
   const amountMatches = [
@@ -51,6 +75,63 @@ export function extractSlipFields(text: string) {
     transferAt,
     confidence: found / 4,
   };
+}
+
+export async function processSlipOcrBuffer(buffer: Buffer) {
+  const config = visionConfig.extend({ GOOGLE_VISION_ENABLED: z.string().optional() }).safeParse(process.env);
+  if (!config.success || !config.data.GOOGLE_CLIENT_EMAIL || !config.data.GOOGLE_PRIVATE_KEY) {
+    throw new AppError(
+      "OCR_UNAVAILABLE",
+      503,
+      "ยังไม่ได้ตั้งค่า Google Cloud Vision OCR (GOOGLE_CLIENT_EMAIL / GOOGLE_PRIVATE_KEY)",
+    );
+  }
+
+  try {
+    const client = new JWT({
+      email: config.data.GOOGLE_CLIENT_EMAIL,
+      key: config.data.GOOGLE_PRIVATE_KEY.replace(/\\n/g, "\n"),
+      scopes: ["https://www.googleapis.com/auth/cloud-platform"],
+    });
+    const access = await client.getAccessToken();
+    const response = await fetch(
+      "https://vision.googleapis.com/v1/images:annotate",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${access.token}`,
+        },
+        body: JSON.stringify({
+          requests: [
+            {
+              image: { content: buffer.toString("base64") },
+              features: [{ type: "DOCUMENT_TEXT_DETECTION" }],
+            },
+          ],
+        }),
+        signal: AbortSignal.timeout(30000),
+        cache: "no-store",
+      },
+    );
+
+    if (!response.ok) throw new Error("VISION_HTTP_ERROR");
+    const parsed = visionResponse.parse(await response.json());
+    if (parsed.responses[0]?.error) throw new Error("VISION_RESPONSE_ERROR");
+
+    const ocrText = parsed.responses[0]?.fullTextAnnotation?.text ?? "";
+    const extractedAmount = extractAmountFromSlip(ocrText);
+    const rawFields = extractSlipFields(ocrText);
+
+    return { ocrText, extractedAmount, rawFields };
+  } catch (error) {
+    if (error instanceof AppError) throw error;
+    throw new AppError(
+      "OCR_UNAVAILABLE",
+      503,
+      "ไม่สามารถอ่านข้อมูลจากภาพสลิปได้ กรุณาตรวจสอบรูปภาพและลองใหม่อีกครั้ง",
+    );
+  }
 }
 
 export async function processSlipOcr(
@@ -130,14 +211,14 @@ export async function processSlipOcr(
     if (!response.ok) throw new Error("VISION_HTTP_ERROR");
     const parsed = visionResponse.parse(await response.json());
     if (parsed.responses[0]?.error) throw new Error("VISION_RESPONSE_ERROR");
-    const result = extractSlipFields(
-      parsed.responses[0]?.fullTextAnnotation?.text ?? "",
-    );
+    const text = parsed.responses[0]?.fullTextAnnotation?.text ?? "";
+    const result = extractSlipFields(text);
+    const amountVal = extractAmountFromSlip(text) ?? (result.amount ? parseFloat(result.amount) : null);
     const updated = await db().paymentSlipExtraction.update({
       where: { id: claimed.id },
       data: {
         status: "COMPLETED",
-        amount: result.amount,
+        amount: amountVal,
         transferAt: result.transferAt,
         bankName: result.bankName,
         reference: result.reference,
