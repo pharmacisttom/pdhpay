@@ -38,7 +38,8 @@ try {
 
   const stats = fs.statSync(backupPath);
   console.log(`✅ Backup Completed Successfully! File size: ${(stats.size / 1024 / 1024).toFixed(2)} MB`);
-} catch (error: any) {
-  console.error("❌ Backup failed:", error.message);
+} catch (error: unknown) {
+  const msg = error instanceof Error ? error.message : String(error);
+  console.error("❌ Backup failed:", msg);
   process.exit(1);
 }

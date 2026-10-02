@@ -7,13 +7,10 @@ import {
   CheckCircle2,
   Clock,
   Building2,
-  Phone,
-  MessageSquare,
   ArrowUpRight,
   TrendingUp,
   MapPin,
   Calendar,
-  AlertCircle,
   ExternalLink,
 } from "lucide-react";
 

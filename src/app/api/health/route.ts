@@ -22,13 +22,14 @@ export async function GET() {
       },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const errMessage = error instanceof Error ? error.message : "Database connection failed";
     return NextResponse.json(
       {
         status: "error",
         timestamp: new Date().toISOString(),
         database: "disconnected",
-        error: error.message || "Database connection failed",
+        error: errMessage,
       },
       { status: 503 }
     );

@@ -13,6 +13,7 @@ try {
   } else {
     console.log("⚠️ Source path does not exist directly via node, looking for alternatives.");
   }
-} catch (e: any) {
-  console.error("Copy error:", e.message);
+} catch (e: unknown) {
+  const msg = e instanceof Error ? e.message : String(e);
+  console.error("Copy error:", msg);
 }

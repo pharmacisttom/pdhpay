@@ -286,7 +286,7 @@ export class GoogleDriveStorageService implements SlipStorage {
           }
           return Buffer.concat(chunks);
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
         if (err instanceof AppError && err.message.includes("ขนาด")) throw err;
       }
     }

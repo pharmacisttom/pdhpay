@@ -30,11 +30,14 @@ services:
       - web-network
 
   web:
-    image: ${IMAGE_NAME:-ghcr.io/pharmacisttom/pdhpay:latest}
+    image: ${IMAGE_NAME:-pdhpay:latest}
     container_name: pdhpay-web-prod
     restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     env_file:
       - .env.production
     depends_on:

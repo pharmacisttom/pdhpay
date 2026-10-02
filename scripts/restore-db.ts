@@ -43,7 +43,8 @@ try {
   execSync(restoreCmd, { stdio: "inherit" });
 
   console.log(`✅ Database Restored Successfully!`);
-} catch (error: any) {
-  console.error("❌ Restore failed:", error.message);
+} catch (error: unknown) {
+  const msg = error instanceof Error ? error.message : String(error);
+  console.error("❌ Restore failed:", msg);
   process.exit(1);
 }

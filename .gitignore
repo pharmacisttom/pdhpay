@@ -11,3 +11,4 @@ src/generated/
 *.log
 .tomvis-source/
 .tools/
+.ssh_keys/
