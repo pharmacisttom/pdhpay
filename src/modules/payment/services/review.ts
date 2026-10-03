@@ -43,7 +43,17 @@ export async function reviewPayment(ctx:Context,id:string,action:string,input:z.
    if(!input.amount)throw new AppError("INVALID_INPUT",400,"กรุณาระบุยอดที่ตรวจสอบ");
    if((action==="correct"||["POSSIBLE_DUPLICATE","INVALID_SLIP"].includes(row.status))&&!input.reason)throw new AppError("INVALID_INPUT",400,"กรุณาระบุเหตุผล");
    const amount=new Prisma.Decimal(input.amount);
-   status=amount.equals(row.declaredAmount)?"VERIFIED":"AMOUNT_MISMATCH";
+   if(input.hn) data.hn = input.hn;
+   if(input.patientName) data.patientName = input.patientName;
+   if(input.vn !== undefined) data.vn = input.vn;
+   if(input.an !== undefined) data.an = input.an;
+   if(input.sourceBank) data.sourceBank = input.sourceBank;
+   if(input.transferDateTime) data.transferDateTime = new Date(input.transferDateTime);
+   if(row.declaredAmount.equals(0)) {
+     data.declaredAmount = amount;
+   }
+   const targetDeclared = data.declaredAmount ? new Prisma.Decimal(data.declaredAmount as string | number | Prisma.Decimal) : row.declaredAmount;
+   status=amount.equals(targetDeclared)?"VERIFIED":"AMOUNT_MISMATCH";
    Object.assign(data,{verifiedAmount:amount,verifiedBy:ctx.userId,verifiedAt:new Date()});
   }else if(action==="receipt"){
    if(row.status!=="VERIFIED"||!row.verifiedAmount||!input.receiptNo)throw new AppError("CONFLICT",409,"ต้องยืนยันยอดและระบุเลขใบเสร็จก่อน");

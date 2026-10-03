@@ -37,6 +37,7 @@ import { exportReport, reportFilters } from "../services/reports";
 import { driveStatus, testDriveConnection, saveDriveConfig, driveConfigSchema } from "../services/drive-admin";
 import { listDepartments, saveDepartment, departmentInput } from "../services/departments";
 import { listAdminUsers, updateUserRoles, userRoleUpdateInput } from "../services/users-admin";
+import { getReceiptMeterData } from "../services/receipt-meter";
 export async function dispatch(request: Request, segments: string[]) {
   return handle(request, async (requestId) => {
     const ctx = await context();
@@ -50,6 +51,12 @@ export async function dispatch(request: Request, segments: string[]) {
     if (resource === "drive" && key === "test" && request.method === "POST") {
       await body(request, z.object({}).strict());
       return testDriveConnection(ctx, requestId);
+    }
+    if (resource === "meter" && request.method === "GET") {
+      const url = new URL(request.url);
+      const year = parseInt(url.searchParams.get("year") || String(new Date().getFullYear()), 10);
+      const rate = parseFloat(url.searchParams.get("rate") || "1.0");
+      return getReceiptMeterData(ctx, { year, ratePerReceipt: rate });
     }
     if (resource === "reports" && key === "export" && request.method === "GET")
       return exportReport(

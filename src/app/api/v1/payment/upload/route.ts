@@ -5,6 +5,7 @@ import { AppError } from "@/core/errors";
 import { audit } from "@/modules/audit/service";
 import { uploadSlipToDrive } from "@/modules/payment/services/drive";
 import { processSlipOcrBuffer } from "@/modules/payment/services/ocr";
+import { publicPoint } from "@/modules/payment/services/public";
 import type { PaymentStatus } from "@/generated/prisma/enums";
 
 export const runtime = "nodejs";
@@ -53,6 +54,13 @@ export async function POST(request: Request) {
       const ext = mime === "image/png" ? "png" : "jpg";
       const filename = `slip_${Date.now()}_${randomUUID().slice(0, 8)}.${ext}`;
 
+      const token = formData.get("token") as string | null;
+      let targetOrgId: string | null = null;
+      if (token) {
+        const point = await publicPoint(token);
+        targetOrgId = point.organizationId;
+      }
+
       // 1. Upload file to Private Google Drive
       const driveResult = await uploadSlipToDrive({
         buffer: bytes,
@@ -65,7 +73,7 @@ export async function POST(request: Request) {
       let ocrAmount: number | null = null;
       let ocrText = "";
       try {
-        const ocrResult = await processSlipOcrBuffer(bytes);
+        const ocrResult = await processSlipOcrBuffer(bytes, targetOrgId ?? undefined);
         ocrAmount = ocrResult.extractedAmount;
         ocrText = ocrResult.ocrText;
       } catch {
@@ -83,8 +91,11 @@ export async function POST(request: Request) {
 
       // 4. Update database if transactionId provided
       if (transactionId) {
-        const txRecord = await db().paymentTransaction.findUnique({
-          where: { id: transactionId },
+        const txRecord = await db().paymentTransaction.findFirst({
+          where: {
+            id: transactionId,
+            ...(targetOrgId ? { organizationId: targetOrgId } : {}),
+          },
         });
 
         if (txRecord) {

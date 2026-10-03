@@ -1,0 +1,21 @@
+export const SYSTEM_VERSION = {
+  appName: "PDHPAY",
+  fullAppName: "PDH SMART PAYMENT SYSTEM",
+  hospitalName: "โรงพยาบาลปลวกแดง (Pluak Daeng Hospital)",
+  coreName: "Tomvis Core",
+  version: "v1.2.0-GA",
+  buildNumber: "2026.10.02-BUILD305",
+  developer: "Tomvis Software Solutions",
+  developerUrl: "https://tomvis.co",
+  copyright: "© 2026 Tomvis. All rights reserved.",
+  status: "Operational",
+  supportedCurrencies: ["THB"],
+  features: {
+    promptpayQr: true,
+    slipOcr: true,
+    googleDriveSync: true,
+    googleSheetsSync: true,
+    auditTrail: true,
+    receiptMetering: true,
+  },
+} as const;

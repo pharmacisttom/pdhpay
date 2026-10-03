@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import type { Context } from "@/core/auth/authorization";
 import { ApiForm } from "@/components/shared/api-form";
+import { TomvisFooter } from "@/components/layout/tomvis-footer";
 
 type NavItem = {
   path: string;
@@ -90,6 +91,14 @@ const navGroups: NavGroup[] = [
   {
     category: "รายงาน & การเชื่อมต่อ",
     items: [
+      {
+        path: "admin/receipt-meter",
+        label: "นับใบเสร็จ & คิดค่าบริการ",
+        icon: Receipt,
+        permission: "payment.report.read",
+        badge: "NEW",
+        badgeColor: "bg-teal-600 text-white",
+      },
       {
         path: "admin/google-sheets",
         label: "Google Sheets Sync",
@@ -277,6 +286,7 @@ export function AdminShell({
 
         <main id="content" className="content">
           {children}
+          <TomvisFooter />
         </main>
       </div>
     </div>

@@ -5,7 +5,6 @@ import { useEffect, useState, useRef } from "react";
 import {
   Camera,
   CheckCircle2,
-  ChevronLeft,
   ChevronRight,
   Download,
   Globe,
@@ -16,10 +15,10 @@ import {
   AlertCircle,
   QrCode,
   ExternalLink,
+  FileCheck2,
 } from "lucide-react";
 import {
   getTranslation,
-  formatDate,
   type SupportedLocale,
 } from "../i18n/translations";
 import {
@@ -63,7 +62,6 @@ interface PublicFormProps {
 }
 
 export function PublicForm({ token, proof, pointData }: PublicFormProps) {
-  // Locale State initialized safely without calling setState in effect
   const [locale, setLocale] = useState<SupportedLocale>(() => {
     if (typeof window === "undefined") return "th";
     try {
@@ -88,19 +86,11 @@ export function PublicForm({ token, proof, pointData }: PublicFormProps) {
 
   const t = getTranslation(locale);
 
-  // Form State (Persisted across language changes)
+  // Form State
   const [step, setStep] = useState<number>(1);
-  const [hn, setHn] = useState<string>("");
-  const [vnAn, setVnAn] = useState<string>("");
-  const [patientName, setPatientName] = useState<string>("");
-  const [payerName, setPayerName] = useState<string>("");
   const [payerPhone, setPayerPhone] = useState<string>("");
-  const [declaredAmount, setDeclaredAmount] = useState<string>("");
-  const [sourceBank, setSourceBank] = useState<string>("");
-  const [transferDateTime, setTransferDateTime] = useState<string>(
-    new Date().toISOString().slice(0, 16)
-  );
   const [note, setNote] = useState<string>("");
+  const [certified, setCertified] = useState<boolean>(false);
 
   // File Upload State
   const [file, setFile] = useState<File | null>(null);
@@ -123,12 +113,12 @@ export function PublicForm({ token, proof, pointData }: PublicFormProps) {
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  // Generate PromptPay QR code whenever amount or bank code changes
+  // Generate PromptPay QR code
   useEffect(() => {
     let active = true;
     const generateQr = async () => {
       const accountNo = pointData.bankAccount.accountNumber || pointData.bankAccount.code;
-      const payload = generatePromptPayPayload(accountNo, declaredAmount || undefined);
+      const payload = generatePromptPayPayload(accountNo);
       const url = await generateQrDataUrl(payload);
       if (active) {
         setQrCodeUrl(url);
@@ -138,7 +128,7 @@ export function PublicForm({ token, proof, pointData }: PublicFormProps) {
     return () => {
       active = false;
     };
-  }, [pointData, declaredAmount]);
+  }, [pointData]);
 
   // Handle File Selection
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -180,44 +170,20 @@ export function PublicForm({ token, proof, pointData }: PublicFormProps) {
     setFileError("");
   };
 
-  // Step Validation
-  const validateStep2 = (): boolean => {
-    setFormError("");
-    if (!hn.trim()) {
-      setFormError(t.validation.requiredHN);
-      return false;
-    }
-    if (!patientName.trim()) {
-      setFormError(t.validation.requiredPatientName);
-      return false;
-    }
-    if (!declaredAmount || parseFloat(declaredAmount) <= 0) {
-      setFormError(t.validation.invalidAmount);
-      return false;
-    }
-    if (!sourceBank.trim()) {
-      setFormError(t.validation.requiredBank);
-      return false;
-    }
-    if (!transferDateTime) {
-      setFormError(t.validation.requiredTransferTime);
-      return false;
-    }
-    return true;
-  };
-
-  const validateStep4 = (): boolean => {
-    setFormError("");
-    if (!file) {
-      setFormError(t.validation.requiredSlip);
-      return false;
-    }
-    return true;
-  };
-
   const handleSubmit = async () => {
     if (busy) return;
     setFormError("");
+
+    if (!file) {
+      setFormError(t.validation.requiredSlip);
+      return;
+    }
+
+    if (!certified) {
+      setFormError(t.legalCertification.requiredError);
+      return;
+    }
+
     setBusy(true);
 
     try {
@@ -226,14 +192,8 @@ export function PublicForm({ token, proof, pointData }: PublicFormProps) {
       formData.append("challenge", proof);
       formData.append("submissionKey", submissionKey);
       formData.append("deviceId", getOrCreateDeviceId());
-      formData.append("hn", hn.trim());
-      if (vnAn.trim()) formData.append("vn", vnAn.trim());
-      formData.append("patientName", patientName.trim());
-      if (payerName.trim()) formData.append("payerName", payerName.trim());
+      formData.append("certified", "true");
       if (payerPhone.trim()) formData.append("payerPhone", payerPhone.trim());
-      formData.append("declaredAmount", declaredAmount);
-      formData.append("sourceBank", sourceBank.trim());
-      formData.append("transferDateTime", new Date(transferDateTime).toISOString());
       if (note.trim()) formData.append("note", note.trim());
       if (file) formData.append("file", file);
 
@@ -248,7 +208,7 @@ export function PublicForm({ token, proof, pointData }: PublicFormProps) {
       }
 
       setResultData(resJson.data);
-      setStep(6);
+      setStep(3);
     } catch (err: unknown) {
       setFormError(err instanceof Error ? err.message : "Error submitting slip");
     } finally {
@@ -287,14 +247,11 @@ export function PublicForm({ token, proof, pointData }: PublicFormProps) {
 
   // Render Step Progress
   const renderProgress = () => (
-    <div className="form-steps-progress" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={6}>
+    <div className="form-steps-progress" role="progressbar" aria-valuenow={step} aria-valuemin={1} aria-valuemax={3}>
       <div className="step-pill-grid">
-        <span className={`step-pill ${step >= 1 ? "active" : ""}`}>1</span>
-        <span className={`step-pill ${step >= 2 ? "active" : ""}`}>2</span>
-        <span className={`step-pill ${step >= 3 ? "active" : ""}`}>3</span>
-        <span className={`step-pill ${step >= 4 ? "active" : ""}`}>4</span>
-        <span className={`step-pill ${step >= 5 ? "active" : ""}`}>5</span>
-        <span className={`step-pill ${step >= 6 ? "active" : ""}`}>6</span>
+        <span className={`step-pill ${step >= 1 ? "active" : ""}`}>1. ภาษา</span>
+        <span className={`step-pill ${step >= 2 ? "active" : ""}`}>2. แนบสลิป & รับรอง</span>
+        <span className={`step-pill ${step >= 3 ? "active" : ""}`}>3. ผลการส่ง</span>
       </div>
     </div>
   );
@@ -398,179 +355,15 @@ export function PublicForm({ token, proof, pointData }: PublicFormProps) {
         </section>
       )}
 
-      {/* STEP 2: Review Billing / Fill Details */}
+      {/* STEP 2: Payment QR & Attach Slip & Legal Certification */}
       {step === 2 && (
         <section className="step-card fade-in">
-          <h2>{t.headers.billingDetails}</h2>
+          <h2>{t.headers.attachSlip}</h2>
+          <p className="step-desc">
+            สแกนชำระเงิน และแนบหลักฐานสลิปการโอน พร้อมรับรองเอกสารเพื่อส่งให้เจ้าหน้าที่
+          </p>
 
-          <div className="info-box-brand">
-            <strong>{pointData.name}</strong>
-            {pointData.location && <p>{pointData.location}</p>}
-          </div>
-
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (validateStep2()) setStep(3);
-            }}
-          >
-            <div className="form-group">
-              <label htmlFor="hn-input">
-                {t.patientInfo.hnLabel} <span className="required-star">*</span>
-              </label>
-              <input
-                id="hn-input"
-                type="text"
-                className="form-control"
-                placeholder={t.patientInfo.hnPlaceholder}
-                value={hn}
-                onChange={(e) => setHn(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="patientName-input">
-                {t.patientInfo.patientNameLabel} <span className="required-star">*</span>
-              </label>
-              <input
-                id="patientName-input"
-                type="text"
-                className="form-control"
-                placeholder={t.patientInfo.patientNamePlaceholder}
-                value={patientName}
-                onChange={(e) => setPatientName(e.target.value)}
-                required
-              />
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="vnan-input">{t.patientInfo.vnAnLabel}</label>
-                <input
-                  id="vnan-input"
-                  type="text"
-                  className="form-control"
-                  placeholder="VN / AN"
-                  value={vnAn}
-                  onChange={(e) => setVnAn(e.target.value)}
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="payerName-input">{t.patientInfo.payerNameLabel}</label>
-                <input
-                  id="payerName-input"
-                  type="text"
-                  className="form-control"
-                  placeholder={t.patientInfo.payerNamePlaceholder}
-                  value={payerName}
-                  onChange={(e) => setPayerName(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="amount-input">
-                  {t.patientInfo.declaredAmountLabel} <span className="required-star">*</span>
-                </label>
-                <input
-                  id="amount-input"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  className="form-control amount-input"
-                  placeholder="0.00"
-                  value={declaredAmount}
-                  onChange={(e) => setDeclaredAmount(e.target.value)}
-                  required
-                />
-                <small className="help-text">{t.patientInfo.declaredAmountHelp}</small>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="phone-input">{t.patientInfo.phoneLabel}</label>
-                <input
-                  id="phone-input"
-                  type="tel"
-                  className="form-control"
-                  placeholder={t.patientInfo.phonePlaceholder}
-                  value={payerPhone}
-                  onChange={(e) => setPayerPhone(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="form-row">
-              <div className="form-group">
-                <label htmlFor="bank-input">
-                  {t.patientInfo.sourceBankLabel} <span className="required-star">*</span>
-                </label>
-                <input
-                  id="bank-input"
-                  type="text"
-                  className="form-control"
-                  placeholder={t.patientInfo.sourceBankPlaceholder}
-                  value={sourceBank}
-                  onChange={(e) => setSourceBank(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="time-input">
-                  {t.patientInfo.transferDateTimeLabel} <span className="required-star">*</span>
-                </label>
-                <input
-                  id="time-input"
-                  type="datetime-local"
-                  className="form-control"
-                  value={transferDateTime}
-                  onChange={(e) => setTransferDateTime(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="note-input">{t.patientInfo.noteLabel}</label>
-              <textarea
-                id="note-input"
-                className="form-control"
-                rows={2}
-                placeholder={t.patientInfo.notePlaceholder}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-              />
-            </div>
-
-            <div className="step-actions">
-              <button
-                type="button"
-                className="button button-outline"
-                onClick={() => setStep(1)}
-              >
-                <ChevronLeft size={18} /> {t.actions.back}
-              </button>
-              <button type="submit" className="button button-primary">
-                {t.actions.next} <ChevronRight size={18} />
-              </button>
-            </div>
-          </form>
-        </section>
-      )}
-
-      {/* STEP 3: Make Payment / QR View */}
-      {step === 3 && (
-        <section className="step-card fade-in">
-          <h2>{t.headers.makePayment}</h2>
-
-          <div className="notice-box-warning" role="alert">
-            <p>{t.bankDetails.pointQrVsPaymentQrNotice}</p>
-          </div>
-
-          <div className="qr-payment-container">
+          <div className="qr-payment-container" style={{ marginBottom: "1.5rem" }}>
             <div className="bank-account-card">
               <h3>{t.bankDetails.receivingAccountTitle}</h3>
               <dl className="bank-details-list">
@@ -586,10 +379,6 @@ export function PublicForm({ token, proof, pointData }: PublicFormProps) {
                   <dt>{t.bankDetails.accountNumber}:</dt>
                   <dd><strong className="highlight-acc">{pointData.bankAccount.accountNumber}</strong></dd>
                 </div>
-                <div>
-                  <dt>{t.patientInfo.declaredAmountLabel}:</dt>
-                  <dd><strong className="highlight-amount">{parseFloat(declaredAmount || "0").toFixed(2)} {t.patientInfo.currency}</strong></dd>
-                </div>
               </dl>
             </div>
 
@@ -603,14 +392,14 @@ export function PublicForm({ token, proof, pointData }: PublicFormProps) {
                     unoptimized
                     src={qrCodeUrl}
                     alt="PromptPay QR Code"
-                    width={240}
-                    height={240}
+                    width={200}
+                    height={200}
                     priority
                   />
                 </div>
               ) : (
                 <div className="qr-placeholder">
-                  <QrCode size={64} />
+                  <QrCode size={48} />
                   <span>กำลังสร้าง QR...</span>
                 </div>
               )}
@@ -624,221 +413,157 @@ export function PublicForm({ token, proof, pointData }: PublicFormProps) {
                   >
                     <Download size={16} /> {t.bankDetails.saveQrButton}
                   </a>
-                  <p className="small-help">{t.bankDetails.saveQrInstructions}</p>
                 </div>
               )}
             </div>
           </div>
 
-          <div className="step-actions">
-            <button
-              type="button"
-              className="button button-outline"
-              onClick={() => setStep(2)}
-            >
-              <ChevronLeft size={18} /> {t.actions.back}
-            </button>
-            <button
-              type="button"
-              className="button button-primary"
-              onClick={() => setStep(4)}
-            >
-              {t.actions.next} (แนบสลิป) <ChevronRight size={18} />
-            </button>
-          </div>
-        </section>
-      )}
+          <div className="slip-upload-card" style={{ padding: "1.25rem", border: "1px solid var(--border-color, #e2e8f0)", borderRadius: "12px", background: "var(--card-bg, #f8fafc)" }}>
+            <h3 style={{ marginBottom: "0.5rem", fontSize: "1.1rem" }}>{t.slipUpload.title}</h3>
+            <p className="step-desc" style={{ marginBottom: "1rem" }}>{t.slipUpload.instructions}</p>
 
-      {/* STEP 4: Attach Slip */}
-      {step === 4 && (
-        <section className="step-card fade-in">
-          <h2>{t.headers.attachSlip}</h2>
-          <p className="step-desc">{t.slipUpload.instructions}</p>
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              capture="environment"
+              className="sr-only"
+              onChange={handleFileChange}
+            />
+            <input
+              ref={galleryInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              className="sr-only"
+              onChange={handleFileChange}
+            />
 
-          <input
-            ref={cameraInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            capture="environment"
-            className="sr-only"
-            onChange={handleFileChange}
-          />
-          <input
-            ref={galleryInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp"
-            className="sr-only"
-            onChange={handleFileChange}
-          />
+            {heicWarning && (
+              <div className="alert alert-warning" role="alert">
+                <AlertCircle size={20} />
+                <span>{t.slipUpload.heicWarning}</span>
+              </div>
+            )}
 
-          {heicWarning && (
-            <div className="alert alert-warning" role="alert">
-              <AlertCircle size={20} />
-              <span>{t.slipUpload.heicWarning}</span>
-            </div>
-          )}
+            {fileError && (
+              <div className="alert alert-danger" role="alert">
+                <AlertCircle size={20} />
+                <span>{fileError}</span>
+              </div>
+            )}
 
-          {fileError && (
-            <div className="alert alert-danger" role="alert">
-              <AlertCircle size={20} />
-              <span>{fileError}</span>
-            </div>
-          )}
-
-          {!file ? (
-            <div className="upload-options-grid">
-              <button
-                type="button"
-                className="upload-option-btn camera-btn"
-                onClick={() => cameraInputRef.current?.click()}
-              >
-                <Camera size={36} />
-                <strong>{t.slipUpload.takePhoto}</strong>
-              </button>
-
-              <button
-                type="button"
-                className="upload-option-btn gallery-btn"
-                onClick={() => galleryInputRef.current?.click()}
-              >
-                <ImageIcon size={36} />
-                <strong>{t.slipUpload.chooseGallery}</strong>
-              </button>
-            </div>
-          ) : (
-            <div className="file-preview-card">
-              <h3>{t.slipUpload.previewTitle}</h3>
-              {filePreviewUrl && (
-                <div className="preview-img-container">
-                  <Image
-                    unoptimized
-                    src={filePreviewUrl}
-                    alt="Slip Preview"
-                    width={320}
-                    height={400}
-                    style={{ objectFit: "contain" }}
-                  />
-                </div>
-              )}
-              <p className="file-name-text">
-                {file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)
-              </p>
-
-              <div className="file-preview-actions">
+            {!file ? (
+              <div className="upload-options-grid">
                 <button
                   type="button"
-                  className="button button-outline button-small"
+                  className="upload-option-btn camera-btn"
+                  onClick={() => cameraInputRef.current?.click()}
+                >
+                  <Camera size={36} />
+                  <strong>{t.slipUpload.takePhoto}</strong>
+                </button>
+
+                <button
+                  type="button"
+                  className="upload-option-btn gallery-btn"
                   onClick={() => galleryInputRef.current?.click()}
                 >
-                  <RefreshCw size={16} /> {t.slipUpload.changeImage}
-                </button>
-                <button
-                  type="button"
-                  className="button button-danger button-small"
-                  onClick={handleRemoveFile}
-                >
-                  <Trash2 size={16} /> {t.slipUpload.removeImage}
+                  <ImageIcon size={36} />
+                  <strong>{t.slipUpload.chooseGallery}</strong>
                 </button>
               </div>
-            </div>
-          )}
+            ) : (
+              <div className="file-preview-card">
+                <h3>{t.slipUpload.previewTitle}</h3>
+                {filePreviewUrl && (
+                  <div className="preview-img-container">
+                    <Image
+                      unoptimized
+                      src={filePreviewUrl}
+                      alt="Slip Preview"
+                      width={320}
+                      height={400}
+                      style={{ objectFit: "contain" }}
+                    />
+                  </div>
+                )}
+                <p className="file-name-text">
+                  {file.name} ({(file.size / (1024 * 1024)).toFixed(2)} MB)
+                </p>
 
-          <p className="small-help text-center" style={{ marginTop: "1rem" }}>
-            {t.slipUpload.supportedFormats}
-            <br />
-            {t.slipUpload.refreshWarning}
-          </p>
-
-          <div className="step-actions">
-            <button
-              type="button"
-              className="button button-outline"
-              onClick={() => setStep(3)}
-            >
-              <ChevronLeft size={18} /> {t.actions.back}
-            </button>
-            <button
-              type="button"
-              className="button button-primary"
-              disabled={!file}
-              onClick={() => {
-                if (validateStep4()) setStep(5);
-              }}
-            >
-              {t.actions.next} <ChevronRight size={18} />
-            </button>
-          </div>
-        </section>
-      )}
-
-      {/* STEP 5: Confirm Before Submission */}
-      {step === 5 && (
-        <section className="step-card fade-in">
-          <h2>{t.headers.confirmSubmission}</h2>
-
-          <div className="summary-card">
-            <dl className="summary-list">
-              <div>
-                <dt>{t.headers.paymentPoint}:</dt>
-                <dd><strong>{pointData.name}</strong></dd>
-              </div>
-              <div>
-                <dt>{t.patientInfo.hnLabel}:</dt>
-                <dd><strong>{hn}</strong></dd>
-              </div>
-              <div>
-                <dt>{t.patientInfo.patientNameLabel}:</dt>
-                <dd><strong>{patientName}</strong></dd>
-              </div>
-              <div>
-                <dt>{t.patientInfo.declaredAmountLabel}:</dt>
-                <dd><strong className="highlight-amount">{parseFloat(declaredAmount).toFixed(2)} {t.patientInfo.currency}</strong></dd>
-              </div>
-              <div>
-                <dt>{t.patientInfo.sourceBankLabel}:</dt>
-                <dd>{sourceBank}</dd>
-              </div>
-              <div>
-                <dt>{t.patientInfo.transferDateTimeLabel}:</dt>
-                <dd>{formatDate(transferDateTime, locale)}</dd>
-              </div>
-              {payerName && (
-                <div>
-                  <dt>{t.patientInfo.payerNameLabel}:</dt>
-                  <dd>{payerName}</dd>
+                <div className="file-preview-actions">
+                  <button
+                    type="button"
+                    className="button button-outline button-small"
+                    onClick={() => galleryInputRef.current?.click()}
+                  >
+                    <RefreshCw size={16} /> {t.slipUpload.changeImage}
+                  </button>
+                  <button
+                    type="button"
+                    className="button button-danger button-small"
+                    onClick={handleRemoveFile}
+                  >
+                    <Trash2 size={16} /> {t.slipUpload.removeImage}
+                  </button>
                 </div>
-              )}
-            </dl>
-
-            {filePreviewUrl && (
-              <div className="summary-thumbnail">
-                <span>สลิปที่แนบ:</span>
-                <Image
-                  unoptimized
-                  src={filePreviewUrl}
-                  alt="Thumbnail"
-                  width={120}
-                  height={150}
-                  style={{ objectFit: "cover", borderRadius: "8px" }}
-                />
               </div>
             )}
           </div>
 
-          <div className="step-actions">
-            <button
-              type="button"
-              className="button button-outline"
-              disabled={busy}
-              onClick={() => setStep(4)}
-            >
-              {t.actions.edit}
-            </button>
+          {/* Optional contact info */}
+          <div className="form-row" style={{ marginTop: "1.25rem" }}>
+            <div className="form-group">
+              <label htmlFor="phone-input">{t.patientInfo.phoneLabel}</label>
+              <input
+                id="phone-input"
+                type="tel"
+                className="form-control"
+                placeholder={t.patientInfo.phonePlaceholder}
+                value={payerPhone}
+                onChange={(e) => setPayerPhone(e.target.value)}
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="note-input">{t.patientInfo.noteLabel}</label>
+              <input
+                id="note-input"
+                type="text"
+                className="form-control"
+                placeholder={t.patientInfo.notePlaceholder}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Legal Certification Checkbox */}
+          <div className="legal-certification-box" style={{ marginTop: "1.5rem", padding: "1rem", background: "var(--cert-bg, #f0fdf4)", border: "1px solid var(--cert-border, #bbf7d0)", borderRadius: "8px" }}>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: "0.75rem", cursor: "pointer", fontWeight: 600, color: "var(--cert-text, #166534)" }}>
+              <input
+                type="checkbox"
+                checked={certified}
+                onChange={(e) => setCertified(e.target.checked)}
+                style={{ width: "20px", height: "20px", marginTop: "2px", accentColor: "#16a34a" }}
+              />
+              <span>
+                <FileCheck2 size={18} style={{ inlineSize: "18px", display: "inline-block", verticalAlign: "sub", marginRight: "6px" }} />
+                {t.legalCertification.checkboxLabel}
+              </span>
+            </label>
+            <p style={{ margin: "0.5rem 0 0 2rem", fontSize: "0.85rem", color: "#475569" }}>
+              {t.legalCertification.statement}
+            </p>
+          </div>
+
+          <div className="step-actions" style={{ marginTop: "1.5rem" }}>
             <button
               type="button"
               className="button button-primary button-large"
-              disabled={busy}
+              disabled={busy || !file || !certified}
               onClick={handleSubmit}
+              style={{ width: "100%", justifyContent: "center" }}
             >
               {busy ? (
                 <>
@@ -854,8 +579,8 @@ export function PublicForm({ token, proof, pointData }: PublicFormProps) {
         </section>
       )}
 
-      {/* STEP 6: Submission Result */}
-      {step === 6 && resultData && (
+      {/* STEP 3: Submission Result */}
+      {step === 3 && resultData && (
         <section className="step-card fade-in text-center">
           <div className="success-icon-wrap">
             <CheckCircle2 size={64} className="text-success" />

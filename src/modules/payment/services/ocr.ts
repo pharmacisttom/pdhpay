@@ -77,7 +77,25 @@ export function extractSlipFields(text: string) {
   };
 }
 
-export async function processSlipOcrBuffer(buffer: Buffer) {
+async function syncVisionEnvFromDb(organizationId?: string) {
+  if (process.env.GOOGLE_CLIENT_EMAIL && process.env.GOOGLE_PRIVATE_KEY) return;
+  const where = organizationId
+    ? { organizationId, key: { in: ["GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY", "GOOGLE_VISION_ENABLED"] } }
+    : { key: { in: ["GOOGLE_CLIENT_EMAIL", "GOOGLE_PRIVATE_KEY", "GOOGLE_VISION_ENABLED"] } };
+  try {
+    const settings = await db().systemSetting.findMany({ where });
+    for (const s of settings) {
+      if (s.value !== null && s.value !== undefined) {
+        process.env[s.key] = String(s.value);
+      }
+    }
+  } catch {
+    // Ignore DB errors if called before DB is ready
+  }
+}
+
+export async function processSlipOcrBuffer(buffer: Buffer, organizationId?: string) {
+  await syncVisionEnvFromDb(organizationId);
   const config = visionConfig.extend({ GOOGLE_VISION_ENABLED: z.string().optional() }).safeParse(process.env);
   if (!config.success || !config.data.GOOGLE_CLIENT_EMAIL || !config.data.GOOGLE_PRIVATE_KEY) {
     throw new AppError(
@@ -155,6 +173,7 @@ export async function processSlipOcr(
       400,
       "OCR รองรับไฟล์รูปภาพเท่านั้น กรุณาตรวจ PDF ด้วยตนเอง",
     );
+  await syncVisionEnvFromDb(ctx.organizationId);
   const config = visionConfig.safeParse(process.env);
   if (!config.success)
     throw new AppError(

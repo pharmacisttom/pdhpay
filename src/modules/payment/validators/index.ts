@@ -48,26 +48,26 @@ export const submissionInput = z
     token: z.string().regex(/^[a-f0-9]{64}$/),
     submissionKey: z.uuid(),
     deviceId: z.uuid(),
+    certified: z.union([z.literal("true"), z.literal("false"), z.boolean()]).optional(),
     hn: z
       .string()
       .trim()
-      .regex(/^[A-Za-z0-9_-]{1,40}$/),
+      .max(40)
+      .optional(),
     vn: z.string().max(40).optional(),
     an: z.string().max(40).optional(),
-    patientName: z.string().trim().min(1).max(160),
+    patientName: z.string().trim().max(160).optional(),
     payerName: z.string().max(160).optional(),
     payerPhone: z
       .string()
       .regex(/^[0-9+ -]{0,30}$/)
       .optional(),
-    declaredAmount: money,
-    sourceBank: z.string().trim().min(1).max(120),
-    transferDateTime: z.iso
-      .datetime({ offset: true })
-      .refine(
-        (v) => Date.parse(v) <= Date.now() + 300000,
-        "เวลาโอนอยู่ในอนาคต",
-      ),
+    declaredAmount: z
+      .string()
+      .regex(/^(?:0|[1-9]\d{0,12})(?:\.\d{1,2})?$/)
+      .optional(),
+    sourceBank: z.string().trim().max(120).optional(),
+    transferDateTime: z.string().optional(),
     note: z.string().max(2000).optional(),
     website: z.literal("").optional(),
   })
@@ -76,6 +76,12 @@ export const reviewInput = z
   .object({
     version: z.number().int().nonnegative(),
     amount: money.optional(),
+    hn: z.string().trim().max(40).optional(),
+    patientName: z.string().trim().max(160).optional(),
+    vn: z.string().max(40).nullable().optional(),
+    an: z.string().max(40).nullable().optional(),
+    sourceBank: z.string().trim().max(120).optional(),
+    transferDateTime: z.string().optional(),
     receiptNo: z.string().trim().min(1).max(80).optional(),
     reason: z.string().trim().min(1).max(1000).optional(),
     status: z

@@ -135,6 +135,17 @@ export async function saveSheetsConfig(
 
 export async function syncReceiptedPayments(ctx: Context, requestId?: string) {
   requirePermission(ctx, "payment.report.export");
+  const settings = await db().systemSetting.findMany({
+    where: {
+      organizationId: ctx.organizationId,
+      key: { in: ["GOOGLE_SHEET_ID", "GOOGLE_SHEET_RANGE"] },
+    },
+  });
+  for (const s of settings) {
+    if (s.value !== null && s.value !== undefined) {
+      process.env[s.key] = String(s.value);
+    }
+  }
   const { config } = await token();
   const range = encodeURIComponent(config.GOOGLE_SHEET_RANGE);
   const existingResponse = await request(

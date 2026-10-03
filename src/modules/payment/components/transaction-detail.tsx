@@ -207,45 +207,127 @@ export function TransactionDetail({
         ))}
       </section>
       <section className="panel">
-        <h2>ตรวจสอบยอด</h2>
+        <h2>กรอกข้อมูลผู้ป่วย และตรวจสอบยอด</h2>
+        {row.slips[0]?.extraction?.status === "COMPLETED" && (
+          <div style={{ marginBottom: "1rem" }}>
+            <button
+              type="button"
+              className="button button-outline"
+              onClick={() => {
+                const ext = row.slips[0]?.extraction;
+                if (!ext) return;
+                const formEl = document.getElementById("officer-verify-form") as HTMLFormElement | null;
+                if (!formEl) return;
+                if (ext.amount) (formEl.elements.namedItem("amount") as HTMLInputElement).value = String(ext.amount);
+                if (ext.bankName) (formEl.elements.namedItem("sourceBank") as HTMLInputElement).value = ext.bankName;
+                if (ext.transferAt) {
+                  (formEl.elements.namedItem("transferDateTime") as HTMLInputElement).value = new Date(ext.transferAt).toISOString().slice(0, 16);
+                }
+              }}
+            >
+              เติมข้อมูลจาก OCR
+            </button>
+          </div>
+        )}
         <form
-          className="payment-filters"
+          id="officer-verify-form"
+          className="form-stack"
           onSubmit={(event) => {
             event.preventDefault();
             const form = new FormData(event.currentTarget);
             const button = (event.nativeEvent as SubmitEvent)
               .submitter as HTMLButtonElement;
             void action(button.value, {
+              hn: form.get("hn"),
+              patientName: form.get("patientName"),
+              vn: form.get("vn") || null,
+              an: form.get("an") || null,
               amount: form.get("amount"),
+              sourceBank: form.get("sourceBank"),
+              transferDateTime: form.get("transferDateTime") || undefined,
               ...(form.get("reason") ? { reason: form.get("reason") } : {}),
             });
           }}
         >
+          <div className="form-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <label>
+              HN (เลขประจำตัวผู้ป่วย) <span style={{ color: "red" }}>*</span>
+              <input
+                name="hn"
+                type="text"
+                required
+                defaultValue={row.hn === "PENDING" ? "" : row.hn}
+                placeholder="ระบุ HN ผู้ป่วย"
+              />
+            </label>
+            <label>
+              ชื่อ-นามสกุล ผู้ป่วย <span style={{ color: "red" }}>*</span>
+              <input
+                name="patientName"
+                type="text"
+                required
+                defaultValue={row.patientName === "รอกรอกข้อมูลผู้ป่วย" ? "" : row.patientName}
+                placeholder="ระบุชื่อ-นามสกุล"
+              />
+            </label>
+          </div>
+          <div className="form-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+            <label>
+              VN
+              <input name="vn" type="text" defaultValue={row.vn ?? ""} placeholder="VN" />
+            </label>
+            <label>
+              AN
+              <input name="an" type="text" defaultValue={row.an ?? ""} placeholder="AN" />
+            </label>
+          </div>
+          <div className="form-row" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "1rem" }}>
+            <label>
+              ยอดเงินที่ตรวจสอบ (บาท) <span style={{ color: "red" }}>*</span>
+              <input
+                name="amount"
+                type="number"
+                step="0.01"
+                min="0.01"
+                required
+                defaultValue={row.verifiedAmount ?? (Number(row.declaredAmount) > 0 ? row.declaredAmount : "")}
+                placeholder="0.00"
+              />
+            </label>
+            <label>
+              ธนาคารต้นทาง
+              <input
+                name="sourceBank"
+                type="text"
+                defaultValue={row.sourceBank === "ไม่ระบุ" ? "" : row.sourceBank}
+                placeholder="เช่น กสิกรไทย"
+              />
+            </label>
+            <label>
+              เวลาโอนเงิน
+              <input
+                name="transferDateTime"
+                type="datetime-local"
+                defaultValue={row.transferDateTime ? new Date(row.transferDateTime).toISOString().slice(0, 16) : ""}
+              />
+            </label>
+          </div>
           <label>
-            ยอดที่ตรวจสอบ
-            <input
-              name="amount"
-              type="number"
-              step="0.01"
-              min="0.01"
-              required
-              defaultValue={row.verifiedAmount ?? row.declaredAmount}
-            />
+            เหตุผล / หมายเหตุการตรวจสอบ
+            <input name="reason" maxLength={1000} placeholder="ระบุเหตุผล (ถ้ามี)" />
           </label>
-          <label>
-            เหตุผล / ผลตรวจ
-            <input name="reason" maxLength={1000} />
-          </label>
-          {allowed("payment.transaction.verify") && (
-            <button value="verify" disabled={busy}>
-              ยืนยันยอด
-            </button>
-          )}
-          {allowed("payment.transaction.correct") && (
-            <button value="correct" disabled={busy}>
-              แก้ยอด
-            </button>
-          )}
+          <div style={{ display: "flex", gap: "1rem", marginTop: "1rem" }}>
+            {allowed("payment.transaction.verify") && (
+              <button value="verify" disabled={busy} className="button button-primary">
+                ตรวจสอบและยืนยันยอด
+              </button>
+            )}
+            {allowed("payment.transaction.correct") && (
+              <button value="correct" disabled={busy} className="button button-outline">
+                แก้ยอด / แก้ไขข้อมูล
+              </button>
+            )}
+          </div>
         </form>
       </section>
       {allowed("payment.receipt.create") && (

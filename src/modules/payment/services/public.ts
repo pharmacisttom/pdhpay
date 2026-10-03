@@ -198,6 +198,10 @@ export async function submitPayment(
         });
         const status = duplicate ? "POSSIBLE_DUPLICATE" : "PENDING_VERIFY";
         const publicStatusToken = statusToken(input.submissionKey);
+        const transferDate =
+          input.transferDateTime && !isNaN(Date.parse(input.transferDateTime))
+            ? new Date(input.transferDateTime)
+            : new Date();
         const payment = await tx.paymentTransaction.create({
           data: {
             organizationId: point.organizationId,
@@ -207,15 +211,15 @@ export async function submitPayment(
             submissionKey: intent.id,
             statusTokenHash: digest(publicStatusToken),
             deviceFingerprintHash: digest("payment-device:" + input.deviceId),
-            hn: input.hn,
+            hn: input.hn || "PENDING",
             vn: input.vn || null,
             an: input.an || null,
-            patientName: input.patientName,
+            patientName: input.patientName || "รอกรอกข้อมูลผู้ป่วย",
             payerName: input.payerName || null,
             payerPhone: input.payerPhone || null,
-            declaredAmount: input.declaredAmount,
-            sourceBank: input.sourceBank,
-            transferDateTime: new Date(input.transferDateTime),
+            declaredAmount: input.declaredAmount ? input.declaredAmount : "0",
+            sourceBank: input.sourceBank || "ไม่ระบุ",
+            transferDateTime: transferDate,
             note: input.note || null,
             status,
             reconciliationStatus: duplicate ? "DUPLICATE" : "NOT_FOUND",

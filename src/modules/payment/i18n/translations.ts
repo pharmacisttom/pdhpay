@@ -124,6 +124,12 @@ export interface TranslationDict {
     requiredSlip: string;
     fileTooLarge: string;
     futureTime: string;
+    requiredCertification: string;
+  };
+  legalCertification: {
+    checkboxLabel: string;
+    requiredError: string;
+    statement: string;
   };
 }
 
@@ -252,6 +258,12 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       requiredSlip: "กรุณาแนบไฟล์สลิปการโอนเงิน",
       fileTooLarge: "ขนาดไฟล์สลิปใหญ่เกิน 10 MB",
       futureTime: "เวลาโอนเงินไม่สามารถเป็นเวลาในอนาคตได้",
+      requiredCertification: "กรุณากดรับรองว่าเอกสารดังกล่าวเป็นเอกสารจริงก่อนส่งหลักฐาน",
+    },
+    legalCertification: {
+      checkboxLabel: "ข้าพเจ้ารับรองว่าเอกสารดังกล่าวเป็นเอกสารจริง และมีผลตามกฎหมาย",
+      requiredError: "กรุณากดรับรองว่าเอกสารดังกล่าวเป็นเอกสารจริงก่อนส่งหลักฐาน",
+      statement: "การส่งเอกสารเท็จมีความผิดตามกฎหมาย และระบบจะบันทึกข้อมูลการส่งไว้เพื่อตรวจสอบ",
     },
   },
 
@@ -379,6 +391,12 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       requiredSlip: "请上传转账凭证图片",
       fileTooLarge: "凭证文件不能超过 10 MB",
       futureTime: "转账时间不能晚于当前时间",
+      requiredCertification: "请勾选确认文件真实有效",
+    },
+    legalCertification: {
+      checkboxLabel: "本人保证所提交的付款凭证为真实有效的法律文件",
+      requiredError: "请勾选确认文件真实有效",
+      statement: "提交虚假凭证属违法行为，系统将记录相关数据以供核查",
     },
   },
 
@@ -506,6 +524,12 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       requiredSlip: "ငွေလွှဲပြေစာပုံ တင်ပါ",
       fileTooLarge: "ဖိုင်ဆိုဒ် 10 MB ထက် မကြီးရပါ",
       futureTime: "ငွေလွှဲချိန်သည် အနာဂတ်အချိန် မဖြစ်ရပါ",
+      requiredCertification: "စာရွက်စာတမ်း အမှန်ဖြစ်ကြောင်း အတည်ပြုပါ",
+    },
+    legalCertification: {
+      checkboxLabel: "ဤငွေလွှဲပြေစာသည် အမှန်တကယ်ဖြစ်ပြီး ဥပဒေအရ အတည်ဖြစ်ကြောင်း အာမခံပါသည်။",
+      requiredError: "စာရွက်စာတမ်း အမှန်ဖြစ်ကြောင်း အတည်ပြုပါ",
+      statement: "မမှန်ကန်သော အချက်အလက်များ တင်သွင်းခြင်းသည် ဥပဒေအရ ပြစ်ဒဏ်ထိုက်ပါသည်",
     },
   },
 
@@ -633,6 +657,12 @@ export const translations: Record<SupportedLocale, TranslationDict> = {
       requiredSlip: "សូមភ្ជាប់រូបភាពបង្កាន់ដៃផ្ទេរប្រាក់",
       fileTooLarge: "ទំហំឯកសារធំជាង 10 MB",
       futureTime: "ម៉ោងផ្ទេរប្រាក់មិនអាចជានាពេលអនាគតបានទេ",
+      requiredCertification: "សូមបញ្ជាក់ថាឯកសារនេះជាឯកសារពិត",
+    },
+    legalCertification: {
+      checkboxLabel: "ខ្ញុំសូមបញ្ជាក់ថាឯកសារនេះជាឯកសារពិតប្រាកដ និងមានប្រសិទ្ធភាពតាមផ្លូវច្បាប់",
+      requiredError: "សូមបញ្ជាក់ថាឯកសារនេះជាឯកសារពិត",
+      statement: "ការផ្ញើឯកសារមិនពិតជាអំពើល្មើសច្បាប់ ហើយប្រព័ន្ធនឹងកត់ត្រាទុក",
     },
   },
 };
