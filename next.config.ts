@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const config: NextConfig = {
-  output: "standalone",
+  // output: "standalone",
   compress: true,
   poweredByHeader: false,
   images: {
@@ -23,8 +23,8 @@ const config: NextConfig = {
   experimental: {
     serverActions: {
       allowedOrigins: [
-        "localhost:3000",
-        "127.0.0.1:3000",
+        "localhost:3010",
+        "127.0.0.1:3010",
         "pdhpay.pluakdaenghospital.cloud",
         "*.pdhpay.pluakdaenghospital.cloud",
       ],

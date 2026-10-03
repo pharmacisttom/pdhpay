@@ -87,7 +87,7 @@ export async function handle(request: Request, run: (requestId: string) => Promi
                 500,
                 "Unable to complete the request.",
               );
-    if (safe.status === 500) logError(requestId);
+    if (safe.status === 500) logError(requestId, error);
     return NextResponse.json(
       {
         success: false,

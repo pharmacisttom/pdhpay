@@ -20,6 +20,8 @@ model Organization {
   paymentPoints PaymentPoint[]
   bankAccounts  BankAccount[]
   departments   Department[]
+
+  @@map("organization")
 }
 
 model User {
@@ -53,6 +55,8 @@ model User {
   @@unique([organizationId, email])
   @@unique([organizationId, id])
   @@index([organizationId, createdAt])
+
+  @@map("user")
 }
 
 model Role {
@@ -67,12 +71,16 @@ model Role {
 
   @@unique([organizationId, name])
   @@unique([organizationId, id])
+
+  @@map("role")
 }
 
 model Permission {
   id    String           @id @default(uuid()) @db.Char(36)
   name  String           @unique @db.VarChar(100)
   roles RolePermission[]
+
+  @@map("permission")
 }
 
 model UserRole {
@@ -84,6 +92,8 @@ model UserRole {
 
   @@id([userId, roleId])
   @@index([organizationId, roleId])
+
+  @@map("userrole")
 }
 
 model RolePermission {
@@ -94,6 +104,8 @@ model RolePermission {
 
   @@id([roleId, permissionId])
   @@index([permissionId])
+
+  @@map("rolepermission")
 }
 
 model Session {
@@ -108,6 +120,8 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+
+  @@map("session")
 }
 
 model TwoFactorCredential {
@@ -118,6 +132,8 @@ model TwoFactorCredential {
   lastStep        Int      @default(-1)
   setupExpiresAt  DateTime
   updatedAt       DateTime @updatedAt
+
+  @@map("twofactorcredential")
 }
 
 model RecoveryCode {
@@ -128,6 +144,8 @@ model RecoveryCode {
   usedAt   DateTime?
 
   @@index([userId])
+
+  @@map("recoverycode")
 }
 
 model PasswordReset {
@@ -140,6 +158,8 @@ model PasswordReset {
 
   @@index([userId])
   @@index([expiresAt])
+
+  @@map("passwordreset")
 }
 
 model AuditLog {
@@ -157,6 +177,8 @@ model AuditLog {
 
   @@index([organizationId, createdAt])
   @@index([organizationId, action, createdAt])
+
+  @@map("auditlog")
 }
 
 model SystemSetting {
@@ -170,6 +192,8 @@ model SystemSetting {
 
   @@unique([scope, key])
   @@index([organizationId])
+
+  @@map("systemsetting")
 }
 
 model RateLimit {
@@ -178,6 +202,8 @@ model RateLimit {
   expiresAt DateTime
 
   @@index([expiresAt])
+
+  @@map("ratelimit")
 }
 
 enum PaymentStatus {
@@ -229,6 +255,8 @@ model BankAccount {
 
   @@unique([organizationId, id])
   @@unique([organizationId, code])
+
+  @@map("bankaccount")
 }
 
 model PaymentPoint {
@@ -259,6 +287,8 @@ model PaymentPoint {
   @@unique([organizationId, id])
   @@unique([organizationId, code])
   @@index([organizationId, status])
+
+  @@map("paymentpoint")
 }
 
 model PaymentPointUser {
@@ -271,6 +301,8 @@ model PaymentPointUser {
 
   @@id([organizationId, paymentPointId, userId])
   @@index([organizationId, userId])
+
+  @@map("paymentpointuser")
 }
 
 model PaymentShift {
@@ -304,6 +336,8 @@ model PaymentShift {
   @@unique([organizationId, paymentPointId, id])
   @@unique([organizationId, paymentPointId, openSlot])
   @@index([organizationId, shiftDate, status])
+
+  @@map("paymentshift")
 }
 
 model PaymentTransaction {
@@ -355,6 +389,8 @@ model PaymentTransaction {
   @@index([organizationId, verifiedBy, submittedAt])
   @@index([organizationId, sourceBank, submittedAt])
   @@index([organizationId, deviceFingerprintHash, submittedAt], map: "PaymentTxn_org_device_submitted_idx")
+
+  @@map("paymenttransaction")
 }
 
 model PaymentSlip {
@@ -376,6 +412,8 @@ model PaymentSlip {
   @@unique([organizationId, id])
   @@index([organizationId, sha256])
   @@index([organizationId, paymentTransactionId])
+
+  @@map("paymentslip")
 }
 
 model PaymentSlipExtraction {
@@ -399,6 +437,8 @@ model PaymentSlipExtraction {
   @@unique([organizationId, id])
   @@unique([organizationId, paymentSlipId])
   @@index([organizationId, status, createdAt])
+
+  @@map("paymentslipextraction")
 }
 
 model PaymentStatusHistory {
@@ -416,12 +456,16 @@ model PaymentStatusHistory {
 
   @@unique([organizationId, paymentTransactionId, version])
   @@index([organizationId, paymentTransactionId, createdAt])
+
+  @@map("paymentstatushistory")
 }
 
 // Global technical counter, not tenant data: PAY-YYYYMMDD-NNNNNN is globally unique.
 model PaymentNumberSequence {
   date  DateTime @id @db.Date
   value Int      @default(0)
+
+  @@map("paymentnumbersequence")
 }
 
 // Durable upload intent enables idempotency and orphan recovery across Drive/DB.
@@ -437,6 +481,8 @@ model PaymentUpload {
   updatedAt      DateTime @updatedAt
 
   @@index([state, updatedAt])
+
+  @@map("paymentupload")
 }
 
 model Department {
@@ -453,5 +499,7 @@ model Department {
   @@unique([organizationId, id])
   @@unique([organizationId, code])
   @@index([organizationId, active])
+
+  @@map("department")
 }
 
